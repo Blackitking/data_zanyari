@@ -18,6 +18,7 @@
     --purple:#7c5cff;
     --cyan:#20d9ff;
     --red:#ff4d6d;
+    --green:#2bd576;
 }
 
 body{
@@ -128,6 +129,13 @@ button{
 button:hover{
     filter:brightness(1.08);
     transform:translateY(-1px);
+}
+
+button:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+    transform:none;
+    filter:none;
 }
 
 .search-section{margin-bottom:14px}
@@ -268,6 +276,41 @@ textarea{
     margin-top:10px;
 }
 
+.cloud-button{
+    display:block;
+    width:min(300px,100%);
+    margin:12px auto 0;
+    background:linear-gradient(135deg,#087f9f,#20bfe0);
+}
+
+.cloud-status{
+    display:none;
+    margin-top:14px;
+    padding:13px 15px;
+    border-radius:15px;
+    background:rgba(255,255,255,.045);
+    border:1px solid var(--line);
+    line-height:1.8;
+    white-space:pre-wrap;
+}
+
+.cloud-status.success{
+    display:block;
+    border-color:rgba(43,213,118,.35);
+    color:#9ff3bf;
+}
+
+.cloud-status.error{
+    display:block;
+    border-color:rgba(255,77,109,.35);
+    color:#ff9aae;
+}
+
+.cloud-status.info{
+    display:block;
+    color:#aeefff;
+}
+
 @media(max-width:560px){
     .container{
         padding:14px 10px 40px;
@@ -369,9 +412,15 @@ textarea{
 
     <button onclick="addPerson()">زیادکردن</button>
 
+    <button class="cloud-button" onclick="openCloudImport()">
+        ☁️ گواستنەوەی داتا بۆ Cloud
+    </button>
+
     <button class="logout" onclick="logout()">
         دەرچوون
     </button>
+
+    <div id="cloudStatus" class="cloud-status"></div>
 
     <div id="adminList" class="admin-list"></div>
 
@@ -387,6 +436,8 @@ textarea{
     - localStorage.clear() بەکارنەهاتووە.
     - خانەی "more" ـی هەموو تۆمارە کۆنەکان پارێزراوە.
     - تەنها بۆ تۆمارە نوێکان phone زیاد دەکرێت.
+    - Cloud migration تەنها copy ـێکی داتا بۆ Worker ـە؛
+      هیچ شتێک لە localStorage ناسڕێتەوە و ناگۆڕێت.
 */
 
 const defaultPeople = [
@@ -858,6 +909,220 @@ function deletePerson(index){
     savePeople();
 
     loadAdmin();
+
+}
+
+
+/*
+    ================================
+    Cloud Migration
+    ================================
+
+    گرنگ:
+    - localStorage.clear() بەکارنەهاتووە.
+    - removeItem("people") بەکارنەهاتووە.
+    - localStorage.people لە هیچ شوێنێک لەم import ـەدا ناگۆڕدرێت.
+    - هەموو field ـەکانی تۆمارەکان، بە تایبەتی id/name/phone/more،
+      بە هەمان شێوەی خۆیان بۆ Worker دەنێردرێن.
+*/
+
+const CLOUD_IMPORT_URL =
+    "https://data-zanyari.lawaking24.workers.dev/api/import";
+
+
+function openCloudImport(){
+
+    const saved =
+        localStorage.getItem("people");
+
+    if(saved === null){
+
+        alert("هیچ localStorage.people ـێک نەدۆزرایەوە.");
+
+        return;
+    }
+
+
+    let localPeople;
+
+    try{
+
+        localPeople = JSON.parse(saved);
+
+    }catch(error){
+
+        alert("نەتوانرا localStorage.people بخوێندرێتەوە.");
+
+        return;
+    }
+
+
+    if(!Array.isArray(localPeople)){
+
+        alert("داتای localStorage.people دروست نییە.");
+
+        return;
+    }
+
+
+    const key =
+        prompt("IMPORT_KEY بنووسە:");
+
+
+    if(key === null){
+        return;
+    }
+
+
+    if(!key.trim()){
+
+        alert("IMPORT_KEY بەتاڵ نابێت.");
+
+        return;
+    }
+
+
+    importPeopleToCloud(
+        localPeople,
+        key.trim()
+    );
+
+}
+
+
+async function importPeopleToCloud(localPeople,key){
+
+    const button =
+        document.querySelector(".cloud-button");
+
+    const status =
+        document.getElementById("cloudStatus");
+
+
+    if(button){
+        button.disabled = true;
+        button.textContent = "☁️ داتا دەگوازرێتەوە...";
+    }
+
+
+    status.className = "cloud-status info";
+    status.textContent =
+        "تکایە چاوەڕێ بکە... داتا بۆ Cloud دەنێردرێت.";
+
+
+    try{
+
+        /*
+            تەنها copy ـێکی نوێ بۆ JSON دروست دەکرێت.
+            هیچ field ـێک زیاد، سڕینەوە یان گۆڕینەوەی localStorage ناکات.
+            Object.assign هەموو خانەکانی هەر تۆمارێک دەپارێزێت.
+        */
+        const records = localPeople.map(person => ({
+            ...(person || {})
+        }));
+
+
+        const response =
+            await fetch(
+                CLOUD_IMPORT_URL,
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":"application/json",
+                        "X-Import-Key":key
+                    },
+
+                    body:JSON.stringify({
+                        people:records
+                    })
+                }
+            );
+
+
+        let result = null;
+
+        try{
+            result = await response.json();
+        }catch(error){
+            result = null;
+        }
+
+
+        if(!response.ok){
+
+            const message =
+                result &&
+                (
+                    result.message ||
+                    result.error ||
+                    result.detail
+                );
+
+            throw new Error(
+                message ||
+                "Worker وەڵامی سەرکەوتوو نەدا. HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const importedCount =
+            result && Number.isFinite(Number(result.imported))
+                ? Number(result.imported)
+                : result && Number.isFinite(Number(result.count))
+                    ? Number(result.count)
+                    : result && Number.isFinite(Number(result.inserted))
+                        ? Number(result.inserted)
+                        : records.length;
+
+
+        status.className = "cloud-status success";
+
+        status.textContent =
+            "✅ تەواو بوو! " +
+            importedCount +
+            " تۆمار بۆ Cloud گوازرایەوە.";
+
+        alert(
+            "✅ تەواو بوو! " +
+            importedCount +
+            " تۆمار بۆ Cloud گوازرایەوە."
+        );
+
+
+    }catch(error){
+
+        console.error("Cloud import error:",error);
+
+        const message =
+            String(error.message || error);
+
+        status.className = "cloud-status error";
+
+        status.textContent =
+            "❌ هەڵە لە گواستنەوەی داتا.\n" +
+            message;
+
+        alert(
+            "❌ هەڵە لە گواستنەوەی داتا.\n" +
+            message
+        );
+
+
+    }finally{
+
+        if(button){
+
+            button.disabled = false;
+
+            button.textContent =
+                "☁️ گواستنەوەی داتا بۆ Cloud";
+
+        }
+
+    }
 
 }
 

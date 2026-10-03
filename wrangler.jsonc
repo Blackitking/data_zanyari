@@ -1,5 +1,11 @@
 {
   "name": "data-zanyari",
   "main": "worker.js",
-  "compatibility_date": "2026-10-02"
+  "compatibility_date": "2026-10-02",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_id": "676f02e1-2be6-4130-89b4-85c202374dee"
+    }
+  ]
 }

@@ -3,17 +3,16 @@ const axios = require("axios");
 require("dotenv").config();
 
 const token = process.env.BOT_TOKEN;
-const API_URL = process.env.API_URL;
 
 if (!token) {
     console.error("BOT_TOKEN نەدۆزرایەوە.");
     process.exit(1);
 }
 
-if (!API_URL) {
-    console.error("API_URL نەدۆزرایەوە.");
-    process.exit(1);
-}
+// چونکە Bot و Server لە هەمان Render Service ـدان
+const API_URL =
+    process.env.API_URL ||
+    `http://127.0.0.1:${process.env.PORT || 3000}`;
 
 const bot = new TelegramBot(token, {
     polling: true
@@ -32,7 +31,7 @@ bot.on("message", async (msg) => {
     const query = msg.text.trim();
 
     try {
-        // ئەگەر ژمارەی تەلەفون بێت
+        // گەڕان بە ژمارەی تەلەفون
         if (/^[+\d\s()-]+$/.test(query)) {
             const response = await axios.get(
                 `${API_URL}/api/search/phone`,
@@ -53,7 +52,7 @@ bot.on("message", async (msg) => {
             return sendResults(msg.chat.id, results);
         }
 
-        // گەڕانی ناو
+        // گەڕان بە ناو
         const words = query.split(/\s+/).filter(Boolean);
 
         if (words.length < 2) {
@@ -79,12 +78,12 @@ bot.on("message", async (msg) => {
             );
         }
 
-        sendResults(msg.chat.id, results);
+        return sendResults(msg.chat.id, results);
 
     } catch (error) {
-        console.error(error.message);
+        console.error("API Error:", error.message);
 
-        bot.sendMessage(
+        return bot.sendMessage(
             msg.chat.id,
             "کێشەیەک ڕوویدا، تکایە دواتر هەوڵ بدەرەوە."
         );

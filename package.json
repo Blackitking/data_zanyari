@@ -1,1 +1,14 @@
-
+{
+  "name": "data-zanyari-telegram-bot",
+  "version": "1.0.0",
+  "description": "Data search website and Telegram bot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}

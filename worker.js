@@ -2,6 +2,52 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // گواستنەوەی داتاکانی localStorage بۆ D1
+    if (url.pathname === "/api/import" && request.method === "POST") {
+      const key = request.headers.get("X-Import-Key");
+
+      if (!env.IMPORT_KEY || key !== env.IMPORT_KEY) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      const body = await request.json();
+      const people = body.people;
+
+      if (!Array.isArray(people)) {
+        return Response.json(
+          { ok: false, error: "people must be an array" },
+          { status: 400 }
+        );
+      }
+
+      let count = 0;
+
+      for (let i = 0; i < people.length; i += 50) {
+        const chunk = people.slice(i, i + 50);
+
+        const statements = chunk.map((person) => {
+          const id = String(person.id || crypto.randomUUID());
+          const name = String(person.name || "");
+          const phone = String(person.phone || "");
+          const more = String(person.more || "");
+
+          return env.DB.prepare(`
+            INSERT OR REPLACE INTO people
+            (id, name, phone, more)
+            VALUES (?, ?, ?, ?)
+          `).bind(id, name, phone, more);
+        });
+
+        await env.DB.batch(statements);
+        count += chunk.length;
+      }
+
+      return Response.json({
+        ok: true,
+        imported: count
+      });
+    }
+
     // Telegram webhook
     if (url.pathname === "/telegram/webhook" && request.method === "POST") {
       const update = await request.json();
@@ -18,6 +64,7 @@ export default {
   }
 };
 
+
 async function handleTelegram(update, env) {
   const message = update.message;
 
@@ -26,7 +73,7 @@ async function handleTelegram(update, env) {
   const chatId = message.chat.id;
   const text = message.text.trim();
 
-  // تەنها Telegram ID ـی خۆت دەتوانێت داتا بگەڕێتەوە
+  // تەنها خاوەنی بۆتەکە
   if (String(chatId) !== String(env.ADMIN_ID)) {
     await sendMessage(
       env.BOT_TOKEN,
@@ -116,6 +163,7 @@ async function handleTelegram(update, env) {
   await sendMessage(env.BOT_TOKEN, chatId, output);
 }
 
+
 async function sendMessage(token, chatId, text) {
   await fetch(
     `https://api.telegram.org/bot${token}/sendMessage`,
@@ -132,6 +180,7 @@ async function sendMessage(token, chatId, text) {
   );
 }
 
+
 function normalizeName(value) {
   return String(value || "")
     .toLowerCase()
@@ -142,6 +191,7 @@ function normalizeName(value) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
 
 function normalizePhone(value) {
   return String(value || "").replace(/[^\d+]/g, "");

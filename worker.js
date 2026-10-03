@@ -1,11 +1,3 @@
-بەڵێ کاکە گیان، ئێستا کۆدەکەت بینی. کێشەکە بەڕاستی CORS ـە؛ چونکە index.html ـەکەت لە GitHub Pages ـە و دەیەوێت بۆ Cloudflare Worker داواکاری بنێرێت.
-من کۆدەکەت بە شێوەیەک چاک دەکەم کە:
-Telegram ـەکەت هەروا کار بکات.
-/api/import هەروا IMPORT_KEY بخوازێت.
-GitHub Pages بتوانێت پەیوەندی بە Worker بکات.
-OPTIONS ـی CORS وەڵام بدرێتەوە.
-هیچ گۆڕانکارییەک لە D1/Telegram ـەکەت نەکرێت.
-ئەم worker.js ـە بە تەواوی جێگای کۆدەکەی ئێستات دابنێ:
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://blackitking.github.io",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -27,12 +19,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS preflight
     if (request.method === "OPTIONS") {
       return corsResponse(null, 204);
     }
 
-    // گواستنەوەی داتاکانی localStorage بۆ D1
     if (url.pathname === "/api/import" && request.method === "POST") {
       try {
         const key = request.headers.get("X-Import-Key");
@@ -51,7 +41,9 @@ export default {
               error: "people must be an array"
             }),
             400,
-            { "Content-Type": "application/json" }
+            {
+              "Content-Type": "application/json"
+            }
           );
         }
 
@@ -90,7 +82,6 @@ export default {
           });
 
           await env.DB.batch(statements);
-
           count += chunk.length;
         }
 
@@ -104,7 +95,6 @@ export default {
             "Content-Type": "application/json"
           }
         );
-
       } catch (error) {
         console.error("Import error:", error);
 
@@ -121,7 +111,6 @@ export default {
       }
     }
 
-    // Telegram webhook
     if (
       url.pathname === "/telegram/webhook" &&
       request.method === "POST"
@@ -133,7 +122,6 @@ export default {
       return new Response("OK");
     }
 
-    // Health check
     if (url.pathname === "/") {
       return new Response(
         "Data Zanyari Worker is running."
@@ -142,21 +130,23 @@ export default {
 
     return new Response(
       "Not Found",
-      { status: 404 }
+      {
+        status: 404
+      }
     );
   }
 };
 
-
 async function handleTelegram(update, env) {
   const message = update.message;
 
-  if (!message || !message.text) return;
+  if (!message || !message.text) {
+    return;
+  }
 
   const chatId = message.chat.id;
   const text = message.text.trim();
 
-  // تەنها خاوەنی بۆتەکە
   if (String(chatId) !== String(env.ADMIN_ID)) {
     await sendMessage(
       env.BOT_TOKEN,
@@ -177,38 +167,29 @@ async function handleTelegram(update, env) {
     return;
   }
 
-  const isPhone =
-    /^[+\d\s()-]+$/.test(text);
+  const isPhone = /^[+\d\s()-]+$/.test(text);
 
   let results;
 
   if (isPhone) {
+    const phone = normalizePhone(text);
 
-    const phone =
-      normalizePhone(text);
-
-    const result =
-      await env.DB.prepare(`
-        SELECT id, name, phone, more
-        FROM people
-        WHERE phone LIKE ?
-        LIMIT 50
-      `)
+    const result = await env.DB.prepare(`
+      SELECT id, name, phone, more
+      FROM people
+      WHERE phone LIKE ?
+      LIMIT 50
+    `)
       .bind(`%${phone}%`)
       .all();
 
-    results =
-      result.results || [];
-
+    results = result.results || [];
   } else {
-
-    const words =
-      normalizeName(text)
-        .split(/\s+/)
-        .filter(Boolean);
+    const words = normalizeName(text)
+      .split(/\s+/)
+      .filter(Boolean);
 
     if (words.length < 2) {
-
       await sendMessage(
         env.BOT_TOKEN,
         chatId,
@@ -218,36 +199,28 @@ async function handleTelegram(update, env) {
       return;
     }
 
-    const result =
-      await env.DB.prepare(`
-        SELECT id, name, phone, more
-        FROM people
-        LIMIT 500
-      `)
-      .all();
+    const result = await env.DB.prepare(`
+      SELECT id, name, phone, more
+      FROM people
+      LIMIT 500
+    `).all();
 
-    results =
-      (result.results || [])
-        .filter(person => {
+    results = (result.results || [])
+      .filter((person) => {
+        const nameWords = normalizeName(person.name)
+          .split(/\s+/)
+          .filter(Boolean);
 
-          const nameWords =
-            normalizeName(person.name)
-              .split(/\s+/)
-              .filter(Boolean);
-
-          return words.every(word =>
-            nameWords.some(
-              nameWord =>
-                nameWord.startsWith(word)
-            )
-          );
-
-        })
-        .slice(0, 50);
+        return words.every((word) =>
+          nameWords.some((nameWord) =>
+            nameWord.startsWith(word)
+          )
+        );
+      })
+      .slice(0, 50);
   }
 
   if (!results.length) {
-
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
@@ -261,16 +234,11 @@ async function handleTelegram(update, env) {
     `🔎 ئەنجامەکان: ${results.length}\n\n`;
 
   for (const person of results) {
-
-    output +=
-      `👤 ${person.name || "-"}\n`;
-
-    output +=
-      `📱 ${person.phone || "-"}\n`;
+    output += `👤 ${person.name || "-"}\n`;
+    output += `📱 ${person.phone || "-"}\n`;
 
     if (person.more) {
-      output +=
-        `📝 ${person.more}\n`;
+      output += `📝 ${person.more}\n`;
     }
 
     output += "\n";
@@ -283,21 +251,14 @@ async function handleTelegram(update, env) {
   );
 }
 
-
-async function sendMessage(
-  token,
-  chatId,
-  text
-) {
+async function sendMessage(token, chatId, text) {
   await fetch(
     `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
-
       headers: {
         "content-type": "application/json"
       },
-
       body: JSON.stringify({
         chat_id: chatId,
         text
@@ -305,7 +266,6 @@ async function sendMessage(
     }
   );
 }
-
 
 function normalizeName(value) {
   return String(value || "")
@@ -318,16 +278,7 @@ function normalizeName(value) {
     .trim();
 }
 
-
 function normalizePhone(value) {
   return String(value || "")
     .replace(/[^\d+]/g, "");
 }
-دوای ئەوە
-لە Cloudflare Worker ـەکەت:
-Edit code → هەموو کۆدی worker.js بسڕەوە → ئەم کۆدە Paste بکە → Save and deploy
-پاشان index.html ـەکەت کە ناردووتە لەگەڵ ئەم Worker ـە گونجاوە.
-IMPORT_KEY ـەکەت ناگۆڕیت.
-BOT_TOKEN و ADMIN_ID ـیش ناگۆڕیت.
-D1 ـیش ناگۆڕیت.
-پاش Deploy، دەتوانین یەکەم جار گواستنەوەی داتا لە localStorage بۆ D1 تاقی بکەینەوە.

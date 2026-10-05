@@ -49,6 +49,7 @@ export default {
   }
 };
 
+
 async function importPeople(request, env) {
   try {
     const key = request.headers.get("X-Import-Key");
@@ -61,46 +62,89 @@ async function importPeople(request, env) {
     const people = body.people;
 
     if (!Array.isArray(people)) {
-      return json({ ok: false, error: "people must be an array" }, 400);
+      return json(
+        {
+          ok: false,
+          error: "people must be an array"
+        },
+        400
+      );
     }
 
+    // داتاکانی پێشوو ناسڕێنەوە.
     for (let i = 0; i < people.length; i += 50) {
       const chunk = people.slice(i, i + 50);
 
       const statements = chunk.map(person => {
-        const id = String(person.id || crypto.randomUUID());
-        const name = String(person.name || "");
-        const phone = String(person.phone || "");
-        const more = String(person.more || "");
+        const id = String(
+          person.id || crypto.randomUUID()
+        );
+
+        const name = String(
+          person.name || ""
+        );
+
+        const phone = String(
+          person.phone || ""
+        );
+
+        const more = String(
+          person.more || ""
+        );
 
         return env.DB.prepare(`
-          INSERT OR REPLACE INTO people (id, name, phone, more)
+          INSERT OR REPLACE INTO people
+          (id, name, phone, more)
           VALUES (?, ?, ?, ?)
-        `).bind(id, name, phone, more);
+        `).bind(
+          id,
+          name,
+          phone,
+          more
+        );
       });
 
       await env.DB.batch(statements);
     }
 
-    return json({ ok: true, imported: people.length });
+    return json({
+      ok: true,
+      imported: people.length
+    });
+
   } catch (error) {
     console.error("IMPORT ERROR:", error);
-    return json({ ok: false, error: String(error) }, 500);
+
+    return json(
+      {
+        ok: false,
+        error: String(error)
+      },
+      500
+    );
   }
 }
 
+
 async function handleTelegram(update, env) {
   if (update.callback_query) {
-    await handleCallback(update.callback_query, env);
+    await handleCallback(
+      update.callback_query,
+      env
+    );
     return;
   }
 
   const message = update.message;
-  if (!message || !message.text) return;
+
+  if (!message || !message.text) {
+    return;
+  }
 
   const chatId = message.chat.id;
   const text = message.text.trim();
 
+  // تەنها ئەدمین بتوانێت بۆتەکە بەکاربهێنێت.
   if (String(chatId) !== String(env.ADMIN_ID)) {
     await sendMessage(
       env.BOT_TOKEN,
@@ -111,14 +155,25 @@ async function handleTelegram(update, env) {
   }
 
   if (text === "/start") {
-    await setMode(env, chatId, "menu");
-    await sendMainMenu(env.BOT_TOKEN, chatId);
+    await setMode(
+      env,
+      chatId,
+      "menu"
+    );
+
+    await sendMainMenu(
+      env.BOT_TOKEN,
+      chatId
+    );
+
     return;
   }
 
   if (text === "/count") {
     const result = await env.DB
-      .prepare("SELECT COUNT(*) AS count FROM people")
+      .prepare(
+        "SELECT COUNT(*) AS count FROM people"
+      )
       .first();
 
     await sendMessage(
@@ -126,37 +181,68 @@ async function handleTelegram(update, env) {
       chatId,
       `📊 کۆی داتا: ${result?.count || 0}`
     );
+
     return;
   }
 
-  const mode = await getMode(env, chatId);
+  const mode = await getMode(
+    env,
+    chatId
+  );
 
   if (mode === "name") {
-    await searchByName(env, chatId, text);
+    await searchByName(
+      env,
+      chatId,
+      text
+    );
     return;
   }
 
   if (mode === "phone") {
-    await searchByPhone(env, chatId, text);
+    await searchByPhone(
+      env,
+      chatId,
+      text
+    );
     return;
   }
 
-  await sendMainMenu(env.BOT_TOKEN, chatId);
+  await sendMainMenu(
+    env.BOT_TOKEN,
+    chatId
+  );
 }
 
-async function handleCallback(query, env) {
-  const chatId = query.message?.chat?.id;
-  if (!chatId) return;
 
-  if (String(chatId) !== String(env.ADMIN_ID)) {
-    await answerCallback(env.BOT_TOKEN, query.id, "ڕێگەپێدراو نییت.");
+async function handleCallback(query, env) {
+  const chatId =
+    query.message?.chat?.id;
+
+  if (!chatId) {
+    return;
+  }
+
+  if (
+    String(chatId) !==
+    String(env.ADMIN_ID)
+  ) {
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id,
+      "ڕێگەپێدراو نییت."
+    );
     return;
   }
 
   const data = query.data || "";
 
   if (data === "search_name") {
-    await setMode(env, chatId, "name");
+    await setMode(
+      env,
+      chatId,
+      "name"
+    );
 
     await answerCallback(
       env.BOT_TOKEN,
@@ -173,7 +259,11 @@ async function handleCallback(query, env) {
   }
 
   if (data === "search_phone") {
-    await setMode(env, chatId, "phone");
+    await setMode(
+      env,
+      chatId,
+      "phone"
+    );
 
     await answerCallback(
       env.BOT_TOKEN,
@@ -190,7 +280,11 @@ async function handleCallback(query, env) {
   }
 
   if (data === "main_menu") {
-    await setMode(env, chatId, "menu");
+    await setMode(
+      env,
+      chatId,
+      "menu"
+    );
 
     await answerCallback(
       env.BOT_TOKEN,
@@ -218,13 +312,15 @@ async function handleCallback(query, env) {
       chatId,
       id
     );
+
+    return;
   }
 }
 
 
-/* =========================================================
-   گەڕان بە ناو
-   ========================================================= */
+/* =========================
+   گەڕانی ناو
+   ========================= */
 
 async function searchByName(env, chatId, text) {
   const search = normalizeName(text);
@@ -238,19 +334,50 @@ async function searchByName(env, chatId, text) {
     return;
   }
 
-  const like = `%${search}%`;
+  const people = await getPeople(env);
 
-  const result = await env.DB.prepare(`
-    SELECT id, name, phone, more
-    FROM people
-    WHERE LOWER(name) LIKE LOWER(?)
-       OR LOWER(more) LIKE LOWER(?)
-    LIMIT 50
-  `)
-    .bind(like, like)
-    .all();
+  const searchWords = search
+    .split(/\s+/)
+    .filter(Boolean);
 
-  const results = result.results || [];
+  /*
+   * هەر وشەی گەڕان دەبێت
+   * لە سەرەتای یەکێک لە وشەکانی ناوی
+   * کەسەکە دەست پێ بکات.
+   *
+   * نموونە:
+   * "ئەحمەد عەلی"
+   *
+   * ئەگەر ناو:
+   * "ئەحمەد عەلی محەمەد"
+   * بێت → دەیدۆزێتەوە.
+   *
+   * بەڵام ئەگەر:
+   * "محەمەد ئەحمەد عەلی"
+   * بێت و تۆ تەنها "عەلی" بنووسیت،
+   * ئەویش دەیدۆزێتەوە چونکە عەلی
+   * سەرەتای یەک وشەی ناوەکەیە.
+   */
+
+  const results = people
+    .filter(person => {
+      const nameWords = normalizeName(
+        person.name
+      )
+        .split(/\s+/)
+        .filter(Boolean);
+
+      return searchWords.every(
+        searchWord =>
+          nameWords.some(
+            nameWord =>
+              nameWord.startsWith(
+                searchWord
+              )
+          )
+      );
+    })
+    .slice(0, 50);
 
   if (!results.length) {
     await sendMessage(
@@ -258,21 +385,28 @@ async function searchByName(env, chatId, text) {
       chatId,
       `❌ هیچ ئەنجامێک بۆ «${text}» نەدۆزرایەوە.`
     );
+
     return;
   }
 
-  const buttons = results.map(person => {
-    const birth = getBirth(person);
+  const buttons = results.map(
+    person => {
+      const birth =
+        getBirth(person);
 
-    const label = birth
-      ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
-      : `👤 ${person.name || "بێ ناو"}`;
+      const label = birth
+        ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
+        : `👤 ${person.name || "بێ ناو"}`;
 
-    return [{
-      text: label.slice(0, 60),
-      callback_data: `person:${String(person.id)}`
-    }];
-  });
+      return [
+        {
+          text: label.slice(0, 60),
+          callback_data:
+            `person:${String(person.id)}`
+        }
+      ];
+    }
+  );
 
   buttons.push([
     {
@@ -290,9 +424,9 @@ async function searchByName(env, chatId, text) {
 }
 
 
-/* =========================================================
-   گەڕان بە ژمارەی تەلەفون
-   ========================================================= */
+/* =========================
+   گەڕانی ژمارەی تەلەفون
+   ========================= */
 
 async function searchByPhone(env, chatId, text) {
   const phone = normalizePhone(text);
@@ -303,14 +437,19 @@ async function searchByPhone(env, chatId, text) {
       chatId,
       "📱 تکایە ژمارەی تەلەفون بنووسە."
     );
+
     return;
   }
 
   const people = await getPeople(env);
 
-  const results = people.filter(person =>
-    normalizePhone(person.phone).includes(phone)
-  ).slice(0, 50);
+  const results = people
+    .filter(person =>
+      normalizePhone(
+        person.phone
+      ).includes(phone)
+    )
+    .slice(0, 50);
 
   if (!results.length) {
     await sendMessage(
@@ -318,21 +457,28 @@ async function searchByPhone(env, chatId, text) {
       chatId,
       "❌ هیچ کەسێک بەو ژمارەیە نەدۆزرایەوە."
     );
+
     return;
   }
 
-  const buttons = results.map(person => {
-    const birth = getBirth(person);
+  const buttons = results.map(
+    person => {
+      const birth =
+        getBirth(person);
 
-    const label = birth
-      ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
-      : `👤 ${person.name || "بێ ناو"}`;
+      const label = birth
+        ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
+        : `👤 ${person.name || "بێ ناو"}`;
 
-    return [{
-      text: label.slice(0, 60),
-      callback_data: `person:${String(person.id)}`
-    }];
-  });
+      return [
+        {
+          text: label.slice(0, 60),
+          callback_data:
+            `person:${String(person.id)}`
+        }
+      ];
+    }
+  );
 
   buttons.push([
     {
@@ -350,12 +496,13 @@ async function searchByPhone(env, chatId, text) {
 }
 
 
-/* =========================================================
-   پیشاندانی کەس
-   ========================================================= */
+/* =========================
+   پیشاندانی داتا
+   ========================= */
 
 async function showPerson(env, chatId, id) {
-  const person = await getPerson(env, id);
+  const person =
+    await getPerson(env, id);
 
   if (!person) {
     await sendMessage(
@@ -363,22 +510,31 @@ async function showPerson(env, chatId, id) {
       chatId,
       "❌ داتا نەدۆزرایەوە."
     );
+
     return;
   }
 
-  const birth = getBirth(person);
+  const birth =
+    getBirth(person);
 
-  let text = `👤 ناو: ${person.name || "-"}\n`;
-  text += `📅 موالید: ${birth || "لە داتا نییە"}\n`;
-  text += `📱 تەلەفون: ${person.phone || "-"}`;
+  let text =
+    `👤 ناو: ${person.name || "-"}`;
 
-  const more = cleanMore(
-    person.more,
-    birth
-  );
+  text +=
+    `\n📅 موالید: ${birth || "لە داتا نییە"}`;
+
+  text +=
+    `\n📱 تەلەفون: ${person.phone || "-"}`;
+
+  const more =
+    cleanMore(
+      person.more,
+      birth
+    );
 
   if (more) {
-    text += `\n📝 زانیاری زیاتر: ${more}`;
+    text +=
+      `\n📝 زانیاری زیاتر: ${more}`;
   }
 
   await sendMessageWithKeyboard(
@@ -397,87 +553,176 @@ async function showPerson(env, chatId, id) {
 }
 
 
-/* =========================================================
-   D1
-   ========================================================= */
+/* =========================
+   وەرگرتنی هەموو کەسەکان
+   ========================= */
 
 async function getPeople(env) {
-  const result = await env.DB.prepare(`
-    SELECT id, name, phone, more
-    FROM people
-    LIMIT 10000
-  `).all();
+  const result =
+    await env.DB.prepare(`
+      SELECT
+        id,
+        name,
+        phone,
+        more
+      FROM people
+      LIMIT 10000
+    `).all();
 
   return result.results || [];
 }
 
+
+/* =========================
+   وەرگرتنی کەسێکی دیاریکراو
+   ========================= */
+
 async function getPerson(env, id) {
-  return await env.DB.prepare(`
-    SELECT id, name, phone, more
-    FROM people
-    WHERE id = ?
-    LIMIT 1
-  `)
-    .bind(id)
-    .first();
+  /*
+   * ئەمە بە شێوەیەکی جێگیرتر کار دەکات.
+   * سەرەتا بە SQL دەگەڕێت.
+   */
+
+  const target =
+    String(id ?? "");
+
+  if (!target) {
+    return null;
+  }
+
+  try {
+    const result =
+      await env.DB.prepare(`
+        SELECT
+          id,
+          name,
+          phone,
+          more
+        FROM people
+        WHERE id = ?
+           OR TRIM(id) = TRIM(?)
+        LIMIT 1
+      `)
+        .bind(
+          target,
+          target
+        )
+        .first();
+
+    if (result) {
+      return result;
+    }
+  } catch (error) {
+    console.error(
+      "GET PERSON SQL ERROR:",
+      error
+    );
+  }
+
+  /*
+   * ئەگەر بە SQL نەیدۆزییەوە،
+   * هەموو داتاکان دەهێنێت و
+   * بە JavaScript بە ID دەگەڕێت.
+   *
+   * ئەمە بۆ ئەو کێشەیەی پێشتر
+   * "داتا نەدۆزرایەوە" دەهاتەوە
+   * دانراوە.
+   */
+
+  try {
+    const people =
+      await getPeople(env);
+
+    const cleanTarget =
+      target.trim();
+
+    const found =
+      people.find(person => {
+        const personId =
+          String(
+            person.id ?? ""
+          );
+
+        return (
+          personId === target ||
+          personId.trim() === cleanTarget
+        );
+      });
+
+    return found || null;
+
+  } catch (error) {
+    console.error(
+      "GET PERSON FALLBACK ERROR:",
+      error
+    );
+
+    return null;
+  }
 }
 
 
-/* =========================================================
-   موالید
-   ========================================================= */
+/* =========================
+   دۆزینەوەی ساڵی لەدایکبوون
+   ========================= */
 
 function getBirth(person) {
-  const more = String(
-    person.more || ""
-  );
+  const more =
+    String(person.more || "");
 
-  const labeled = more.match(
-    /(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\d]{0,15}((?:19|20)\d{2})/i
-  );
+  const labeled =
+    more.match(
+      /(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\d]{0,15}((?:19|20)\d{2})/i
+    );
 
   if (labeled) {
     return labeled[1];
   }
 
-  const year = more.match(
-    /\b((?:19|20)\d{2})\b/
-  );
+  const year =
+    more.match(
+      /\b((?:19|20)\d{2})\b/
+    );
 
-  return year ? year[1] : "";
+  return year
+    ? year[1]
+    : "";
 }
 
 
-/* =========================================================
+/* =========================
    پاککردنەوەی زانیاری زیاتر
-   ========================================================= */
+   ========================= */
 
 function cleanMore(more, birth) {
-  let text = String(
-    more || ""
-  ).trim();
+  let text =
+    String(more || "").trim();
 
   if (!text || !birth) {
     return text;
   }
 
-  text = text.replace(
-    new RegExp(
-      `(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\\d]{0,15}${birth}`,
-      "i"
-    ),
-    ""
-  );
+  text =
+    text.replace(
+      new RegExp(
+        `(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\\d]{0,15}${birth}`,
+        "i"
+      ),
+      ""
+    );
 
   return text.trim();
 }
 
 
-/* =========================================================
-   Main Menu
-   ========================================================= */
+/* =========================
+   مێنی سەرەکی
+   ========================= */
 
-async function sendMainMenu(token, chatId) {
+async function sendMainMenu(
+  token,
+  chatId
+) {
   await sendMessageWithKeyboard(
     token,
     chatId,
@@ -500,26 +745,38 @@ async function sendMainMenu(token, chatId) {
 }
 
 
-/* =========================================================
-   Telegram Send Message
-   ========================================================= */
+/* =========================
+   ناردنی پەیام
+   ========================= */
 
-async function sendMessage(token, chatId, text) {
+async function sendMessage(
+  token,
+  chatId,
+  text
+) {
   return fetch(
     `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
       headers: {
-        "content-type": "application/json"
+        "content-type":
+          "application/json"
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: String(text).slice(0, 4000)
+        text: String(text).slice(
+          0,
+          4000
+        )
       })
     }
   );
 }
 
+
+/* =========================
+   ناردنی پەیام لەگەڵ دوگمە
+   ========================= */
 
 async function sendMessageWithKeyboard(
   token,
@@ -532,19 +789,28 @@ async function sendMessageWithKeyboard(
     {
       method: "POST",
       headers: {
-        "content-type": "application/json"
+        "content-type":
+          "application/json"
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: String(text).slice(0, 4000),
+        text: String(text).slice(
+          0,
+          4000
+        ),
         reply_markup: {
-          inline_keyboard: keyboard
+          inline_keyboard:
+            keyboard
         }
       })
     }
   );
 }
 
+
+/* =========================
+   وەڵامدانەوەی Callback
+   ========================= */
 
 async function answerCallback(
   token,
@@ -556,10 +822,12 @@ async function answerCallback(
     {
       method: "POST",
       headers: {
-        "content-type": "application/json"
+        "content-type":
+          "application/json"
       },
       body: JSON.stringify({
-        callback_query_id: callbackId,
+        callback_query_id:
+          callbackId,
         text,
         show_alert: false
       })
@@ -568,9 +836,9 @@ async function answerCallback(
 }
 
 
-/* =========================================================
-   Session
-   ========================================================= */
+/* =========================
+   Mode ـی بەکارهێنەر
+   ========================= */
 
 async function setMode(
   env,
@@ -586,7 +854,7 @@ async function setMode(
 
   await env.DB.prepare(`
     INSERT OR REPLACE INTO bot_sessions
-      (chat_id, mode)
+    (chat_id, mode)
     VALUES (?, ?)
   `)
     .bind(
@@ -608,40 +876,64 @@ async function getMode(
     )
   `).run();
 
-  const row = await env.DB.prepare(`
-    SELECT mode
-    FROM bot_sessions
-    WHERE chat_id = ?
-  `)
-    .bind(String(chatId))
-    .first();
+  const row =
+    await env.DB.prepare(`
+      SELECT mode
+      FROM bot_sessions
+      WHERE chat_id = ?
+    `)
+      .bind(
+        String(chatId)
+      )
+      .first();
 
   return row?.mode || "menu";
 }
 
 
-/* =========================================================
-   Normalize Name
-   ========================================================= */
+/* =========================
+   Normalize ـی ناو
+   ========================= */
 
 function normalizeName(value) {
   return String(value || "")
     .toLowerCase()
-    .replace(/[ًٌٍَُِّْـ]/g, "")
-    .replace(/[يى]/g, "ی")
-    .replace(/[ك]/g, "ک")
-    .replace(/[ۀة]/g, "ە")
-    .replace(/[ؤ]/g, "ۆ")
-    .replace(/\s+/g, " ")
+    .replace(
+      /[ًٌٍَُِّْـ]/g,
+      ""
+    )
+    .replace(
+      /[يى]/g,
+      "ی"
+    )
+    .replace(
+      /[ك]/g,
+      "ک"
+    )
+    .replace(
+      /[ۀة]/g,
+      "ە"
+    )
+    .replace(
+      /[ؤ]/g,
+      "ۆ"
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
     .trim();
 }
 
 
-/* =========================================================
-   Normalize Phone
-   ========================================================= */
+/* =========================
+   Normalize ـی ژمارە
+   ========================= */
 
 function normalizePhone(value) {
   return String(value || "")
-    .replace(/[^\d+]/g, "");
+    .replace(
+      /[^\d+]/g,
+      ""
+    );
 }

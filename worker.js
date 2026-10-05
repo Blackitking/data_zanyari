@@ -664,3 +664,770 @@ async function handleTelegram(update, env) {
       chatId,
       "menu"
     );
+
+    await sendMainMenu(
+      env.BOT_TOKEN,
+      chatId
+    );
+
+    return;
+  }
+
+  if (text === "/count") {
+
+    const result =
+      await env.DB
+        .prepare(
+          "SELECT COUNT(*) AS count FROM people"
+        )
+        .first();
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      `📊 کۆی داتا: ${result?.count || 0}`
+    );
+
+    return;
+  }
+
+  const mode =
+    await getMode(
+      env,
+      chatId
+    );
+
+  if (mode === "name") {
+
+    await searchByName(
+      env,
+      chatId,
+      text
+    );
+
+    return;
+  }
+
+  if (mode === "phone") {
+
+    await searchByPhone(
+      env,
+      chatId,
+      text
+    );
+
+    return;
+  }
+
+  await sendMainMenu(
+    env.BOT_TOKEN,
+    chatId
+  );
+
+}
+
+
+/* =====================================================
+   TELEGRAM CALLBACK
+   ===================================================== */
+
+async function handleCallback(query, env) {
+
+  const chatId =
+    query.message?.chat?.id;
+
+  if (!chatId) {
+    return;
+  }
+
+  /*
+     هیچ ADMIN_ID ـێک لێرە نییە.
+     هەموو بەکارهێنەران دەتوانن callback بەکاربهێنن.
+  */
+
+  const data =
+    query.data || "";
+
+  if (data === "search_name") {
+
+    await setMode(
+      env,
+      chatId,
+      "name"
+    );
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "👤 تکایە ناوی کەسەکە بنووسە:"
+    );
+
+    return;
+  }
+
+  if (data === "search_phone") {
+
+    await setMode(
+      env,
+      chatId,
+      "phone"
+    );
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "📱 تکایە ژمارەی تەلەفون بنووسە:"
+    );
+
+    return;
+  }
+
+  if (data === "main_menu") {
+
+    await setMode(
+      env,
+      chatId,
+      "menu"
+    );
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await sendMainMenu(
+      env.BOT_TOKEN,
+      chatId
+    );
+
+    return;
+  }
+
+  if (data.startsWith("person:")) {
+
+    const id =
+      data.slice(7);
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await showPerson(
+      env,
+      chatId,
+      id
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   TELEGRAM NAME SEARCH
+   ===================================================== */
+
+async function searchByName(env, chatId, text) {
+
+  const search =
+    normalizeName(text);
+
+  if (!search) {
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "👤 تکایە ناوێک بنووسە."
+    );
+
+    return;
+  }
+
+  const people =
+    await getPeople(env);
+
+  const words =
+    search
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const results =
+    people
+      .filter(person => {
+
+        const fullName =
+          normalizeName(person.name);
+
+        const more =
+          normalizeName(person.more);
+
+        if (fullName.includes(search)) {
+          return true;
+        }
+
+        const nameWords =
+          fullName
+            .split(/\s+/)
+            .filter(Boolean);
+
+        const matches =
+          words.every(word =>
+            nameWords.some(nameWord =>
+              nameWord.includes(word)
+            )
+          );
+
+        if (matches) {
+          return true;
+        }
+
+        if (
+          more &&
+          more.includes(search)
+        ) {
+          return true;
+        }
+
+        return false;
+
+      })
+      .slice(0, 50);
+
+  if (!results.length) {
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      `❌ هیچ ئەنجامێک بۆ «${text}» نەدۆزرایەوە.`
+    );
+
+    return;
+  }
+
+  const buttons =
+    results.map(person => {
+
+      const birth =
+        getBirth(person);
+
+      const title =
+        birth
+          ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
+          : `👤 ${person.name || "بێ ناو"}`;
+
+      return [
+        {
+          text: title.slice(0, 60),
+          callback_data:
+            `person:${String(person.id)}`
+        }
+      ];
+
+    });
+
+  buttons.push([
+    {
+      text: "⬅️ گەڕانەوە",
+      callback_data: "main_menu"
+    }
+  ]);
+
+  await sendMessageWithKeyboard(
+    env.BOT_TOKEN,
+    chatId,
+    `🔎 ${results.length} ئەنجام دۆزرایەوە.\n\nیەکێکیان هەڵبژێرە:`,
+    buttons
+  );
+
+}
+
+
+/* =====================================================
+   TELEGRAM PHONE SEARCH
+   ===================================================== */
+
+async function searchByPhone(env, chatId, text) {
+
+  const phone =
+    normalizePhone(text);
+
+  if (!phone) {
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "📱 تکایە ژمارەی تەلەفون بنووسە."
+    );
+
+    return;
+  }
+
+  const people =
+    await getPeople(env);
+
+  const results =
+    people
+      .filter(person =>
+        normalizePhone(person.phone)
+          .includes(phone)
+      )
+      .slice(0, 50);
+
+  if (!results.length) {
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "❌ هیچ کەسێک بەو ژمارەیە نەدۆزرایەوە."
+    );
+
+    return;
+  }
+
+  const buttons =
+    results.map(person => {
+
+      const birth =
+        getBirth(person);
+
+      const label =
+        birth
+          ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
+          : `👤 ${person.name || "بێ ناو"}`;
+
+      return [
+        {
+          text: label.slice(0, 60),
+          callback_data:
+            `person:${String(person.id)}`
+        }
+      ];
+
+    });
+
+  buttons.push([
+    {
+      text: "⬅️ گەڕانەوە",
+      callback_data: "main_menu"
+    }
+  ]);
+
+  await sendMessageWithKeyboard(
+    env.BOT_TOKEN,
+    chatId,
+    `📱 ${results.length} ئەنجام دۆزرایەوە.\n\nیەکێکیان هەڵبژێرە:`,
+    buttons
+  );
+
+}
+
+
+/* =====================================================
+   SHOW PERSON
+   ===================================================== */
+
+async function showPerson(env, chatId, id) {
+
+  const person =
+    await getPerson(env, id);
+
+  if (!person) {
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "❌ داتا نەدۆزرایەوە."
+    );
+
+    return;
+  }
+
+  const birth =
+    getBirth(person);
+
+  let text =
+    `👤 ناو: ${person.name || "-"}`;
+
+  text +=
+    `\n📅 موالید: ${birth || "لە داتا نییە"}`;
+
+  text +=
+    `\n📱 تەلەفون: ${person.phone || "-"}`;
+
+  const more =
+    cleanMore(
+      person.more,
+      birth
+    );
+
+  if (more) {
+
+    text +=
+      `\n📝 زانیاری زیاتر: ${more}`;
+
+  }
+
+  await sendMessageWithKeyboard(
+    env.BOT_TOKEN,
+    chatId,
+    text,
+    [
+      [
+        {
+          text: "⬅️ گەڕانەوە بۆ سەرەتا",
+          callback_data: "main_menu"
+        }
+      ]
+    ]
+  );
+
+}
+
+
+/* =====================================================
+   GET PEOPLE
+   ===================================================== */
+
+async function getPeople(env) {
+
+  const result =
+    await env.DB.prepare(`
+      SELECT id, name, phone, more
+      FROM people
+      LIMIT 10000
+    `).all();
+
+  return result.results || [];
+
+}
+
+
+/* =====================================================
+   GET PERSON
+   ===================================================== */
+
+async function getPerson(env, id) {
+
+  const cleanId =
+    String(id || "").trim();
+
+  if (!cleanId) {
+    return null;
+  }
+
+  let person =
+    await env.DB
+      .prepare(`
+        SELECT id, name, phone, more
+        FROM people
+        WHERE id = ?
+        LIMIT 1
+      `)
+      .bind(cleanId)
+      .first();
+
+  if (person) {
+    return person;
+  }
+
+  const people =
+    await getPeople(env);
+
+  person =
+    people.find(item =>
+      String(item.id).trim() === cleanId
+    );
+
+  return person || null;
+
+}
+
+
+/* =====================================================
+   BIRTH
+   ===================================================== */
+
+function getBirth(person) {
+
+  const more =
+    String(person.more || "");
+
+  const labeled =
+    more.match(
+      /(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\d]{0,15}((?:19|20)\d{2})/i
+    );
+
+  if (labeled) {
+    return labeled[1];
+  }
+
+  const year =
+    more.match(
+      /\b((?:19|20)\d{2})\b/
+    );
+
+  return year ? year[1] : "";
+
+}
+
+
+/* =====================================================
+   CLEAN MORE
+   ===================================================== */
+
+function cleanMore(more, birth) {
+
+  let text =
+    String(more || "").trim();
+
+  if (!text || !birth) {
+    return text;
+  }
+
+  text =
+    text.replace(
+      new RegExp(
+        `(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\\d]{0,15}${birth}`,
+        "i"
+      ),
+      ""
+    );
+
+  return text.trim();
+
+}
+
+
+/* =====================================================
+   MAIN MENU
+   ===================================================== */
+
+async function sendMainMenu(token, chatId) {
+
+  await sendMessageWithKeyboard(
+    token,
+    chatId,
+    "بەخێربێیت 👋\n\nتکایە دانەیەکیان هەڵبژێرە:",
+    [
+      [
+        {
+          text: "👤 گەڕان بە ناو",
+          callback_data: "search_name"
+        }
+      ],
+      [
+        {
+          text: "📱 ژمارەی تەلەفون",
+          callback_data: "search_phone"
+        }
+      ]
+    ]
+  );
+
+}
+
+
+/* =====================================================
+   SEND MESSAGE
+   ===================================================== */
+
+async function sendMessage(token, chatId, text) {
+
+  return fetch(
+    `https://api.telegram.org/bot${token}/sendMessage`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: String(text).slice(0, 4000)
+      })
+    }
+  );
+
+}
+
+
+/* =====================================================
+   SEND MESSAGE + KEYBOARD
+   ===================================================== */
+
+async function sendMessageWithKeyboard(
+  token,
+  chatId,
+  text,
+  keyboard
+) {
+
+  return fetch(
+    `https://api.telegram.org/bot${token}/sendMessage`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: String(text).slice(0, 4000),
+        reply_markup: {
+          inline_keyboard: keyboard
+        }
+      })
+    }
+  );
+
+}
+
+
+/* =====================================================
+   ANSWER CALLBACK
+   ===================================================== */
+
+async function answerCallback(
+  token,
+  callbackId,
+  text = ""
+) {
+
+  return fetch(
+    `https://api.telegram.org/bot${token}/answerCallbackQuery`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        callback_query_id: callbackId,
+        text,
+        show_alert: false
+      })
+    }
+  );
+
+}
+
+
+/* =====================================================
+   BOT SESSION
+   ===================================================== */
+
+async function setMode(env, chatId, mode) {
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS bot_sessions (
+      chat_id TEXT PRIMARY KEY,
+      mode TEXT NOT NULL DEFAULT 'menu'
+    )
+  `).run();
+
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO bot_sessions
+    (chat_id, mode)
+    VALUES (?, ?)
+  `)
+  .bind(
+    String(chatId),
+    mode
+  )
+  .run();
+
+}
+
+
+async function getMode(env, chatId) {
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS bot_sessions (
+      chat_id TEXT PRIMARY KEY,
+      mode TEXT NOT NULL DEFAULT 'menu'
+    )
+  `).run();
+
+  const row =
+    await env.DB.prepare(`
+      SELECT mode
+      FROM bot_sessions
+      WHERE chat_id = ?
+    `)
+    .bind(
+      String(chatId)
+    )
+    .first();
+
+  return row?.mode || "menu";
+
+}
+
+
+/* =====================================================
+   NORMALIZE NAME
+   ===================================================== */
+
+function normalizeName(value) {
+
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(
+      /[ًٌٍَُِّْـ]/g,
+      ""
+    )
+    .replace(
+      /[يىئ]/g,
+      "ی"
+    )
+    .replace(
+      /ك/g,
+      "ک"
+    )
+    .replace(
+      /[ۀة]/g,
+      "ە"
+    )
+    .replace(
+      /ؤ/g,
+      "ۆ"
+    )
+    .replace(
+      /[أإآ]/g,
+      "ا"
+    )
+    .replace(
+      /[،,؛;|/\\()[\]{}:_"'`]/g,
+      " "
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .trim();
+
+}
+
+
+/* =====================================================
+   NORMALIZE PHONE
+   ===================================================== */
+
+function normalizePhone(value) {
+
+  return String(value || "")
+    .replace(
+      /[^\d+]/g,
+      ""
+    );
+
+}

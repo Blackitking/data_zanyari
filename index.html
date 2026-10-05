@@ -11,7 +11,6 @@
 :root{
     --bg:#070b17;
     --card:#111930;
-    --card2:#182442;
     --line:rgba(255,255,255,.10);
     --text:#f7f9ff;
     --muted:#aab5d1;
@@ -135,13 +134,22 @@ button:disabled{
     opacity:.55;
     cursor:not-allowed;
     transform:none;
-    filter:none;
 }
 
-.search-section{margin-bottom:14px}
-.search-section:last-child{margin-bottom:0}
-.search-label{font-weight:800;color:#dce3fa;margin-bottom:7px}
-.phone-section{padding-top:14px;border-top:1px solid var(--line)}
+.search-section{
+    margin-bottom:14px;
+}
+
+.phone-section{
+    padding-top:14px;
+    border-top:1px solid var(--line);
+}
+
+.search-label{
+    font-weight:800;
+    color:#dce3fa;
+    margin-bottom:7px;
+}
 
 #results{
     margin-top:18px;
@@ -170,7 +178,6 @@ button:disabled{
 .person-name{
     font-size:20px;
     font-weight:800;
-    padding-right:5px;
 }
 
 .phone-data{
@@ -202,6 +209,28 @@ button:disabled{
     border:1px dashed var(--line);
     border-radius:18px;
     margin-top:18px;
+}
+
+.status{
+    margin-top:14px;
+    padding:12px 15px;
+    border-radius:15px;
+    display:none;
+    line-height:1.8;
+}
+
+.status.show{
+    display:block;
+}
+
+.status.info{
+    color:#aeefff;
+    border:1px solid rgba(32,217,255,.25);
+}
+
+.status.error{
+    color:#ff9aae;
+    border:1px solid rgba(255,77,109,.30);
 }
 
 .admin-button{
@@ -276,41 +305,6 @@ textarea{
     margin-top:10px;
 }
 
-.cloud-button{
-    display:block;
-    width:min(300px,100%);
-    margin:12px auto 0;
-    background:linear-gradient(135deg,#087f9f,#20bfe0);
-}
-
-.cloud-status{
-    display:none;
-    margin-top:14px;
-    padding:13px 15px;
-    border-radius:15px;
-    background:rgba(255,255,255,.045);
-    border:1px solid var(--line);
-    line-height:1.8;
-    white-space:pre-wrap;
-}
-
-.cloud-status.success{
-    display:block;
-    border-color:rgba(43,213,118,.35);
-    color:#9ff3bf;
-}
-
-.cloud-status.error{
-    display:block;
-    border-color:rgba(255,77,109,.35);
-    color:#ff9aae;
-}
-
-.cloud-status.info{
-    display:block;
-    color:#aeefff;
-}
-
 @media(max-width:560px){
     .container{
         padding:14px 10px 40px;
@@ -339,13 +333,16 @@ textarea{
 <div class="hero">
     <div class="logo">⌕</div>
     <h1>گەڕانی ناوەکان</h1>
-    <div class="subtitle">ناو یان ژمارەی تەلەفون بگەڕێ و ئەنجامەکان ببینە</div>
+    <div class="subtitle">
+        ناو یان ژمارەی تەلەفون بگەڕێ و ئەنجامەکان ببینە
+    </div>
 </div>
 
 <div class="search-card">
 
     <div class="search-section">
         <div class="search-label">گەڕان بە ناو</div>
+
         <div class="search-box">
             <input
                 type="text"
@@ -353,32 +350,50 @@ textarea{
                 placeholder="تەنها ناو بنووسە..."
                 onkeydown="if(event.key==='Enter') searchNames()"
             >
-            <button onclick="searchNames()">گەڕان</button>
+
+            <button id="nameSearchButton" onclick="searchNames()">
+                گەڕان
+            </button>
         </div>
     </div>
 
+
     <div class="search-section phone-section">
-        <div class="search-label">گەڕان بە ژمارەی تەلەفون</div>
+
+        <div class="search-label">
+            گەڕان بە ژمارەی تەلەفون
+        </div>
+
         <div class="search-box">
+
             <input
                 type="tel"
                 id="phoneSearchInput"
                 placeholder="تەنها ژمارە بنووسە..."
                 onkeydown="if(event.key==='Enter') searchPhone()"
             >
-            <button onclick="searchPhone()">گەڕان</button>
+
+            <button id="phoneSearchButton" onclick="searchPhone()">
+                گەڕان
+            </button>
+
         </div>
     </div>
+
 
     <div id="results" class="empty">
         بۆ پیشاندانی ناو یان ژمارە، گەڕان بکە.
     </div>
 
+    <div id="status" class="status"></div>
+
 </div>
+
 
 <button class="admin-button" onclick="openAdmin()">
     Admin Panel
 </button>
+
 
 <div id="adminPanel" class="admin">
 
@@ -386,6 +401,7 @@ textarea{
 
     <div class="admin-field">
         <label>ناو</label>
+
         <input
             type="text"
             id="newName"
@@ -393,34 +409,41 @@ textarea{
         >
     </div>
 
+
     <div class="admin-field">
+
         <label>ژمارەی تەلەفون</label>
+
         <input
             type="tel"
             id="phoneData"
             placeholder="ژمارەی تەلەفون"
         >
+
     </div>
 
+
     <div class="admin-field">
+
         <label>داتای زیاتر / پرسیارەکان</label>
+
         <textarea
             id="moreData"
             placeholder="هەر داتا، پرسیار یان زانیارییەک هەیە لێرە بنووسە..."
         ></textarea>
+
     </div>
 
-    <button onclick="addPerson()">زیادکردن</button>
 
-    <button class="cloud-button" onclick="openCloudImport()">
-        ☁️ گواستنەوەی داتا بۆ Cloud
+    <button onclick="addPerson()">
+        زیادکردن
     </button>
+
 
     <button class="logout" onclick="logout()">
         دەرچوون
     </button>
 
-    <div id="cloudStatus" class="cloud-status"></div>
 
     <div id="adminList" class="admin-list"></div>
 
@@ -428,20 +451,27 @@ textarea{
 
 </div>
 
+
 <script>
 
-/*
-    گرنگ:
-    - داتای کۆنی localStorage نابڕدرێت و overwrite ناکرێت.
-    - localStorage.clear() بەکارنەهاتووە.
-    - خانەی "more" ـی هەموو تۆمارە کۆنەکان پارێزراوە.
-    - تەنها بۆ تۆمارە نوێکان phone زیاد دەکرێت.
-    - Cloud migration تەنها copy ـێکی داتا بۆ Worker ـە؛
-      هیچ شتێک لە localStorage ناسڕێتەوە و ناگۆڕێت.
-*/
+/* =====================================================
+   Cloudflare Worker
+   ===================================================== */
+
+const WORKER_URL =
+    "https://data-zanyari.lawaking24.workers.dev";
+
+
+/* =====================================================
+   localStorage
+   =====================================================
+
+   گرنگ:
+   هیچ داتای کۆن ناسڕینەوە.
+   localStorage هەر وەک خۆی دەمێنێتەوە.
+   ===================================================== */
 
 const defaultPeople = [
-
     {name:"ئەوین محمد امین",more:""},
     {name:"اسماعیل محمد",more:""},
     {name:"ژوان ستار محمد",more:""},
@@ -453,34 +483,24 @@ const defaultPeople = [
     {name:"اسماعیل رسول ئەحمەد",more:""},
     {name:"حسن علی",more:""},
     {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
     {name:"حسن علی اسماعیل",more:""},
     {name:"حسن علی بابیر",more:""},
     {name:"حسن علی تمر",more:""},
     {name:"حسن علی جمو",more:""}
-
 ];
 
 
-/*
-    ئەگەر people هەبێت:
-    هەمان داتا بە تەواوی وەردەگیرێت.
-    ئەگەر هیچ people ـێک نەبێت:
-    تەنها ئەو 20 تۆمارە سەرەتاییە دادەنرێن.
-*/
-function loadPeople(){
+function loadLocalPeople(){
 
-    const saved = localStorage.getItem("people");
+    const saved =
+        localStorage.getItem("people");
 
     if(saved !== null){
 
         try{
 
-            const parsed = JSON.parse(saved);
+            const parsed =
+                JSON.parse(saved);
 
             if(Array.isArray(parsed)){
                 return parsed;
@@ -488,20 +508,21 @@ function loadPeople(){
 
         }catch(error){
 
-            console.error("هەڵە لە خوێندنەوەی داتای people:",error);
+            console.error(error);
 
         }
 
     }
 
-    return defaultPeople.map(person => ({...person}));
+    return defaultPeople.map(
+        person => ({...person})
+    );
 }
 
 
-let people = loadPeople();
+let people = loadLocalPeople();
 
 
-/* هەڵگرتنی داتا */
 function savePeople(){
 
     localStorage.setItem(
@@ -512,19 +533,58 @@ function savePeople(){
 }
 
 
-/* پیشاندانی ئەنجامەکان */
+/* =====================================================
+   NORMALIZE NAME
+   ===================================================== */
+
+function normalizeName(value){
+
+    return String(value || "")
+        .toLowerCase()
+        .normalize("NFKC")
+        .replace(/[ًٌٍَُِّْـ]/g,"")
+        .replace(/[يىئ]/g,"ی")
+        .replace(/ك/g,"ک")
+        .replace(/[ۀة]/g,"ە")
+        .replace(/ؤ/g,"ۆ")
+        .replace(/[أإآ]/g,"ا")
+        .replace(/[،,؛;|/\\()[\]{}:_"'`]/g," ")
+        .replace(/\s+/g," ")
+        .trim();
+
+}
+
+
+/* =====================================================
+   NORMALIZE PHONE
+   ===================================================== */
+
+function normalizePhone(value){
+
+    return String(value || "")
+        .replace(/[^\d+]/g,"");
+
+}
+
+
+/* =====================================================
+   SHOW RESULTS
+   ===================================================== */
+
 function showResults(found){
 
     const results =
         document.getElementById("results");
 
-    if(found.length === 0){
+
+    if(!found || found.length === 0){
 
         results.innerHTML =
             '<div class="empty">هیچ تۆمارێک نەدۆزرایەوە.</div>';
 
         return;
     }
+
 
     results.innerHTML = "";
 
@@ -597,58 +657,290 @@ function showResults(found){
 }
 
 
-/* گەڕان بە ناو */
-function normalizeName(value){
-    return String(value || "")
-        .toLowerCase()
-        .replace(/[ًٌٍَُِّْـ]/g, "")
-        .replace(/[يى]/g, "ی")
-        .replace(/[ك]/g, "ک")
-        .replace(/[ۀة]/g, "ە")
-        .replace(/\s+/g, " ")
-        .trim();
+/* =====================================================
+   STATUS
+   ===================================================== */
+
+function showStatus(message,type){
+
+    const status =
+        document.getElementById("status");
+
+    status.className =
+        "status show " + type;
+
+    status.textContent =
+        message;
 }
 
-function searchNames(){
-    const input = normalizeName(document.getElementById("searchInput").value);
+
+function hideStatus(){
+
+    const status =
+        document.getElementById("status");
+
+    status.className =
+        "status";
+
+    status.textContent = "";
+}
+
+
+/* =====================================================
+   CLOUD NAME SEARCH
+   ===================================================== */
+
+async function searchNames(){
+
+    const input =
+        normalizeName(
+            document.getElementById("searchInput").value
+        );
+
 
     if(!input){
+
         document.getElementById("results").innerHTML =
             '<div class="empty">بۆ پیشاندانی ناو، گەڕان بکە.</div>';
+
+        hideStatus();
+
         return;
     }
 
-    const words = input.split(/\s+/);
 
-    const found = people.filter(person => {
-        const name = normalizeName(person.name);
-        const nameWords = name.split(/\s+/).filter(Boolean);
+    const button =
+        document.getElementById("nameSearchButton");
 
-        return words.every(word =>
-            nameWords.some(nameWord => nameWord.startsWith(word))
+
+    button.disabled = true;
+
+    button.textContent = "دەگەڕێت...";
+
+
+    showStatus(
+        "🔎 لە Cloud ـدا بەدوای ناوەکە دەگەڕێین...",
+        "info"
+    );
+
+
+    try{
+
+        /*
+           Worker endpoint:
+           /api/search/name?q=...
+        */
+
+        const url =
+            WORKER_URL +
+            "/api/search/name?q=" +
+            encodeURIComponent(input);
+
+
+        const response =
+            await fetch(url);
+
+
+        let data = null;
+
+        try{
+            data = await response.json();
+        }catch(error){
+            data = null;
+        }
+
+
+        if(!response.ok){
+
+            throw new Error(
+                data?.error ||
+                data?.message ||
+                "HTTP " + response.status
+            );
+
+        }
+
+
+        let found =
+            data?.people ||
+            data?.results ||
+            data;
+
+
+        if(!Array.isArray(found)){
+            found = [];
+        }
+
+
+        /*
+           ئەگەر Worker هەموو داتا گەڕاندەوە،
+           لێرەش filtering ـی دروست دەکەین.
+        */
+
+        const words =
+            input
+                .split(/\s+/)
+                .filter(Boolean);
+
+
+        found =
+            found.filter(person => {
+
+                const name =
+                    normalizeName(person.name);
+
+                const more =
+                    normalizeName(person.more);
+
+
+                if(name.includes(input)){
+                    return true;
+                }
+
+
+                const nameWords =
+                    name
+                        .split(/\s+/)
+                        .filter(Boolean);
+
+
+                const everyWord =
+                    words.every(word =>
+                        nameWords.some(nameWord =>
+                            nameWord.includes(word)
+                        )
+                    );
+
+
+                if(everyWord){
+                    return true;
+                }
+
+
+                if(more.includes(input)){
+                    return true;
+                }
+
+
+                return words.every(word =>
+                    more.includes(word)
+                );
+
+            });
+
+
+        showResults(found);
+
+
+        if(found.length){
+
+            showStatus(
+                "✅ " + found.length + " تۆمار دۆزرایەوە.",
+                "info"
+            );
+
+        }else{
+
+            showStatus(
+                "هیچ تۆمارێک بەم ناوە نەدۆزرایەوە.",
+                "info"
+            );
+
+        }
+
+
+    }catch(error){
+
+        console.error(
+            "Name search error:",
+            error
         );
-    });
 
-    showResults(found);
+
+        /*
+           ئەگەر Cloud وەڵام نەدات،
+           localStorage ـیش تاقی دەکەینەوە.
+        */
+
+        const words =
+            input
+                .split(/\s+/)
+                .filter(Boolean);
+
+
+        const localFound =
+            people.filter(person => {
+
+                const name =
+                    normalizeName(person.name);
+
+                const more =
+                    normalizeName(person.more);
+
+
+                if(name.includes(input)){
+                    return true;
+                }
+
+
+                if(more.includes(input)){
+                    return true;
+                }
+
+
+                return words.every(word =>
+                    name
+                        .split(/\s+/)
+                        .some(nameWord =>
+                            nameWord.includes(word)
+                        )
+                );
+
+            });
+
+
+        if(localFound.length){
+
+            showResults(localFound);
+
+            showStatus(
+                "⚠️ Cloud بەردەست نەبوو؛ داتا لە مۆبایلەکە پیشان درا.",
+                "info"
+            );
+
+        }else{
+
+            showResults([]);
+
+            showStatus(
+                "❌ نەتوانرا Cloud پەیوەندی پێوە بکرێت.\n" +
+                error.message,
+                "error"
+            );
+
+        }
+
+    }finally{
+
+        button.disabled = false;
+
+        button.textContent =
+            "گەڕان";
+
+    }
+
 }
 
-function normalizePhone(value){
 
-    return String(value || "")
-        .replace(/[^\d+]/g,"");
+/* =====================================================
+   CLOUD PHONE SEARCH
+   ===================================================== */
 
-}
-
-
-/* گەڕان بە ژمارەی تەلەفون */
-function searchPhone(){
+async function searchPhone(){
 
     const input =
         normalizePhone(
-            document
-            .getElementById("phoneSearchInput")
-            .value
-            .trim()
+            document.getElementById("phoneSearchInput").value
         );
 
 
@@ -661,24 +953,157 @@ function searchPhone(){
     }
 
 
-    const found =
-        people.filter(person => {
-
-            const phone =
-                normalizePhone(person.phone);
-
-            return phone !== "" &&
-                   phone.includes(input);
-
-        });
+    const button =
+        document.getElementById("phoneSearchButton");
 
 
-    showResults(found);
+    button.disabled = true;
+
+    button.textContent = "دەگەڕێت...";
+
+
+    showStatus(
+        "📞 لە Cloud ـدا بەدوای ژمارەکە دەگەڕێین...",
+        "info"
+    );
+
+
+    try{
+
+        const url =
+            WORKER_URL +
+            "/api/search/phone?q=" +
+            encodeURIComponent(input);
+
+
+        const response =
+            await fetch(url);
+
+
+        let data = null;
+
+        try{
+            data = await response.json();
+        }catch(error){
+            data = null;
+        }
+
+
+        if(!response.ok){
+
+            throw new Error(
+                data?.error ||
+                data?.message ||
+                "HTTP " + response.status
+            );
+
+        }
+
+
+        let found =
+            data?.people ||
+            data?.results ||
+            data;
+
+
+        if(!Array.isArray(found)){
+            found = [];
+        }
+
+
+        /*
+           بۆ دڵنیابوون لە دروستی ژمارە.
+        */
+
+        found =
+            found.filter(person => {
+
+                const phone =
+                    normalizePhone(person.phone);
+
+                return phone.includes(input);
+
+            });
+
+
+        showResults(found);
+
+
+        if(found.length){
+
+            showStatus(
+                "✅ " + found.length + " تۆمار دۆزرایەوە.",
+                "info"
+            );
+
+        }else{
+
+            showStatus(
+                "هیچ تۆمارێک بەم ژمارەیە نەدۆزرایەوە.",
+                "info"
+            );
+
+        }
+
+
+    }catch(error){
+
+        console.error(
+            "Phone search error:",
+            error
+        );
+
+
+        /*
+           fallback بۆ localStorage
+        */
+
+        const found =
+            people.filter(person => {
+
+                const phone =
+                    normalizePhone(person.phone);
+
+                return phone.includes(input);
+
+            });
+
+
+        showResults(found);
+
+
+        if(found.length){
+
+            showStatus(
+                "⚠️ Cloud بەردەست نەبوو؛ داتا لە مۆبایلەکە پیشان درا.",
+                "info"
+            );
+
+        }else{
+
+            showStatus(
+                "هیچ تۆمارێک نەدۆزرایەوە.",
+                "info"
+            );
+
+        }
+
+    }finally{
+
+        button.disabled = false;
+
+        button.textContent =
+            "گەڕان";
+
+    }
 
 }
 
 
-/* کردنەوەی Admin */
+/* =====================================================
+   ADMIN
+   ===================================================== */
+
 function openAdmin(){
 
     const code =
@@ -703,7 +1128,6 @@ function openAdmin(){
 }
 
 
-/* زیادکردنی کەس */
 function addPerson(){
 
     const nameInput =
@@ -728,51 +1152,68 @@ function addPerson(){
 
     if(!name && !phone){
 
-        alert("تکایە ناو یان ژمارەی تەلەفون بنووسە.");
+        alert(
+            "تکایە ناو یان ژمارەی تەلەفون بنووسە."
+        );
 
         return;
     }
 
-    /* ناو و ژمارە هەریەکەیان بە جیاوازی دڵنیایی لە دوبارەبوونەوەی بۆ دەکرێت */
-    const normalizedNewName = normalizeName(name);
+
+    const normalizedNewName =
+        normalizeName(name);
+
 
     if(normalizedNewName){
-        const duplicateName = people.some(person =>
-            normalizeName(person.name) === normalizedNewName
-        );
+
+        const duplicateName =
+            people.some(person =>
+                normalizeName(person.name) ===
+                normalizedNewName
+            );
+
 
         if(duplicateName){
-            alert("ببورە، ئەم ناوە دوبارەیە. ناتوانیت هەڵی بگریت.");
+
+            alert(
+                "ببورە، ئەم ناوە دوبارەیە."
+            );
+
             return;
         }
+
     }
 
-    const normalizedNewPhone = normalizePhone(phone);
+
+    const normalizedNewPhone =
+        normalizePhone(phone);
+
 
     if(normalizedNewPhone){
-        const duplicatePhone = people.some(person =>
-            normalizePhone(person.phone) === normalizedNewPhone
-        );
+
+        const duplicatePhone =
+            people.some(person =>
+                normalizePhone(person.phone) ===
+                normalizedNewPhone
+            );
+
 
         if(duplicatePhone){
-            alert("ببورە، ئەم ژمارەی تەلەفونە دوبارەیە. ناتوانیت هەڵی بگریت.");
+
+            alert(
+                "ببورە، ئەم ژمارەی تەلەفونە دوبارەیە."
+            );
+
             return;
         }
+
     }
 
 
-    /*
-        تەنها تۆمارێکی نوێ زیاد دەکەین.
-        هیچ تۆمارێکی کۆن ناگۆڕدرێت.
-    */
     people.push({
-
         name:name,
-
         phone:phone,
-
         more:more
-
     });
 
 
@@ -780,21 +1221,22 @@ function addPerson(){
 
 
     nameInput.value = "";
-
     phoneInput.value = "";
-
     moreInput.value = "";
 
 
     loadAdmin();
 
 
-    alert("تۆمارەکە زیادکرا.");
+    alert("✅ تۆمارەکە زیادکرا.");
 
 }
 
 
-/* لیستی Admin */
+/* =====================================================
+   ADMIN LIST
+   ===================================================== */
+
 function loadAdmin(){
 
     const list =
@@ -895,10 +1337,13 @@ function loadAdmin(){
 }
 
 
-/* سڕینەوەی تۆمار */
 function deletePerson(index){
 
-    if(!confirm("دڵنیایت لە سڕینەوەی ئەم تۆمارە؟")){
+    if(
+        !confirm(
+            "دڵنیایت لە سڕینەوەی ئەم تۆمارە؟"
+        )
+    ){
 
         return;
     }
@@ -913,239 +1358,11 @@ function deletePerson(index){
 }
 
 
-/*
-    ================================
-    Cloud Migration
-    ================================
-
-    گرنگ:
-    - localStorage.clear() بەکارنەهاتووە.
-    - removeItem("people") بەکارنەهاتووە.
-    - localStorage.people لە هیچ شوێنێک لەم import ـەدا ناگۆڕدرێت.
-    - هەموو field ـەکانی تۆمارەکان، بە تایبەتی id/name/phone/more،
-      بە هەمان شێوەی خۆیان بۆ Worker دەنێردرێن.
-*/
-
-const CLOUD_IMPORT_URL =
-    "https://data-zanyari.lawaking24.workers.dev/api/import";
-
-
-function openCloudImport(){
-
-    const saved =
-        localStorage.getItem("people");
-
-    if(saved === null){
-
-        alert("هیچ localStorage.people ـێک نەدۆزرایەوە.");
-
-        return;
-    }
-
-
-    let localPeople;
-
-    try{
-
-        localPeople = JSON.parse(saved);
-
-    }catch(error){
-
-        alert("نەتوانرا localStorage.people بخوێندرێتەوە.");
-
-        return;
-    }
-
-
-    if(!Array.isArray(localPeople)){
-
-        alert("داتای localStorage.people دروست نییە.");
-
-        return;
-    }
-
-
-    const key =
-        prompt("IMPORT_KEY بنووسە:");
-
-
-    if(key === null){
-        return;
-    }
-
-
-    if(!key.trim()){
-
-        alert("IMPORT_KEY بەتاڵ نابێت.");
-
-        return;
-    }
-
-
-    importPeopleToCloud(
-        localPeople,
-        key.trim()
-    );
-
-}
-
-
-async function importPeopleToCloud(localPeople,key){
-
-    const button =
-        document.querySelector(".cloud-button");
-
-    const status =
-        document.getElementById("cloudStatus");
-
-
-    if(button){
-        button.disabled = true;
-        button.textContent = "☁️ داتا دەگوازرێتەوە...";
-    }
-
-
-    status.className = "cloud-status info";
-    status.textContent =
-        "تکایە چاوەڕێ بکە... داتا بۆ Cloud دەنێردرێت.";
-
-
-    try{
-
-        /*
-            تەنها copy ـێکی نوێ بۆ JSON دروست دەکرێت.
-            هیچ field ـێک زیاد، سڕینەوە یان گۆڕینەوەی localStorage ناکات.
-            Object.assign هەموو خانەکانی هەر تۆمارێک دەپارێزێت.
-        */
-        const records = localPeople.map(person => ({
-            ...(person || {})
-        }));
-
-
-        const response =
-            await fetch(
-                CLOUD_IMPORT_URL,
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":"application/json",
-                        "X-Import-Key":key
-                    },
-
-                    body:JSON.stringify({
-                        people:records
-                    })
-                }
-            );
-
-
-        let result = null;
-
-        try{
-            result = await response.json();
-        }catch(error){
-            result = null;
-        }
-
-
-        if(!response.ok){
-
-            const message =
-                result &&
-                (
-                    result.message ||
-                    result.error ||
-                    result.detail
-                );
-
-            throw new Error(
-                message ||
-                "Worker وەڵامی سەرکەوتوو نەدا. HTTP " +
-                response.status
-            );
-
-        }
-
-
-        const importedCount =
-            result && Number.isFinite(Number(result.imported))
-                ? Number(result.imported)
-                : result && Number.isFinite(Number(result.count))
-                    ? Number(result.count)
-                    : result && Number.isFinite(Number(result.inserted))
-                        ? Number(result.inserted)
-                        : records.length;
-
-
-        status.className = "cloud-status success";
-
-        status.textContent =
-            "✅ تەواو بوو! " +
-            importedCount +
-            " تۆمار بۆ Cloud گوازرایەوە.";
-
-        alert(
-            "✅ تەواو بوو! " +
-            importedCount +
-            " تۆمار بۆ Cloud گوازرایەوە."
-        );
-
-
-    }catch(error){
-
-        console.error("Cloud import error:",error);
-
-        const message =
-            String(error.message || error);
-
-        status.className = "cloud-status error";
-
-        status.textContent =
-            "❌ هەڵە لە گواستنەوەی داتا.\n" +
-            message;
-
-        alert(
-            "❌ هەڵە لە گواستنەوەی داتا.\n" +
-            message
-        );
-
-
-    }finally{
-
-        if(button){
-
-            button.disabled = false;
-
-            button.textContent =
-                "☁️ گواستنەوەی داتا بۆ Cloud";
-
-        }
-
-    }
-
-}
-
-
-/* دەرچوون */
 function logout(){
 
     document
         .getElementById("adminPanel")
         .style.display = "none";
-
-}
-
-
-/* ڕێگری لە HTML injection */
-function escapeHTML(text){
-
-    return String(text || "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
 
 }
 

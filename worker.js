@@ -157,43 +157,74 @@ async function handleCallback(query, env) {
 
   if (data === "search_name") {
     await setMode(env, chatId, "name");
-    await answerCallback(env.BOT_TOKEN, query.id);
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
       "👤 تکایە ناوی کەسەکە بنووسە:"
     );
+
     return;
   }
 
   if (data === "search_phone") {
     await setMode(env, chatId, "phone");
-    await answerCallback(env.BOT_TOKEN, query.id);
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
       "📱 تکایە ژمارەی تەلەفون بنووسە:"
     );
+
     return;
   }
 
   if (data === "main_menu") {
     await setMode(env, chatId, "menu");
-    await answerCallback(env.BOT_TOKEN, query.id);
-    await sendMainMenu(env.BOT_TOKEN, chatId);
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await sendMainMenu(
+      env.BOT_TOKEN,
+      chatId
+    );
+
     return;
   }
 
   if (data.startsWith("person:")) {
     const id = data.slice(7);
-    await answerCallback(env.BOT_TOKEN, query.id);
-    await showPerson(env, chatId, id);
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await showPerson(
+      env,
+      chatId,
+      id
+    );
   }
 }
 
-/* =========================
-   گەڕان بە ناو - چاککراوە
-   ========================= */
+
+/* =========================================================
+   گەڕان بە ناو
+   ========================================================= */
 
 async function searchByName(env, chatId, text) {
   const search = normalizeName(text);
@@ -207,34 +238,19 @@ async function searchByName(env, chatId, text) {
     return;
   }
 
-  const people = await getPeople(env);
+  const like = `%${search}%`;
 
-  const searchWords = search
-    .split(/\s+/)
-    .filter(Boolean);
+  const result = await env.DB.prepare(`
+    SELECT id, name, phone, more
+    FROM people
+    WHERE LOWER(name) LIKE LOWER(?)
+       OR LOWER(more) LIKE LOWER(?)
+    LIMIT 50
+  `)
+    .bind(like, like)
+    .all();
 
-  const results = people.filter(person => {
-    const fullName = normalizeName(person.name);
-
-    if (!fullName) return false;
-
-    // گەڕانی وشەی تەواو لە هەر شوێنێکی ناو
-    if (fullName.includes(search)) {
-      return true;
-    }
-
-    // گەڕانی هەر بەشێک لە وشەکانی ناو
-    const nameWords = fullName
-      .split(/\s+/)
-      .filter(Boolean);
-
-    return searchWords.every(searchWord =>
-      nameWords.some(nameWord =>
-        nameWord.includes(searchWord) ||
-        searchWord.includes(nameWord)
-      )
-    );
-  }).slice(0, 50);
+  const results = result.results || [];
 
   if (!results.length) {
     await sendMessage(
@@ -273,9 +289,10 @@ async function searchByName(env, chatId, text) {
   );
 }
 
-/* =========================
-   گەڕان بە ژمارە
-   ========================= */
+
+/* =========================================================
+   گەڕان بە ژمارەی تەلەفون
+   ========================================================= */
 
 async function searchByPhone(env, chatId, text) {
   const phone = normalizePhone(text);
@@ -318,7 +335,10 @@ async function searchByPhone(env, chatId, text) {
   });
 
   buttons.push([
-    { text: "⬅️ گەڕانەوە", callback_data: "main_menu" }
+    {
+      text: "⬅️ گەڕانەوە",
+      callback_data: "main_menu"
+    }
   ]);
 
   await sendMessageWithKeyboard(
@@ -328,6 +348,11 @@ async function searchByPhone(env, chatId, text) {
     buttons
   );
 }
+
+
+/* =========================================================
+   پیشاندانی کەس
+   ========================================================= */
 
 async function showPerson(env, chatId, id) {
   const person = await getPerson(env, id);
@@ -347,7 +372,10 @@ async function showPerson(env, chatId, id) {
   text += `📅 موالید: ${birth || "لە داتا نییە"}\n`;
   text += `📱 تەلەفون: ${person.phone || "-"}`;
 
-  const more = cleanMore(person.more, birth);
+  const more = cleanMore(
+    person.more,
+    birth
+  );
 
   if (more) {
     text += `\n📝 زانیاری زیاتر: ${more}`;
@@ -357,14 +385,21 @@ async function showPerson(env, chatId, id) {
     env.BOT_TOKEN,
     chatId,
     text,
-    [[
-      {
-        text: "⬅️ گەڕانەوە بۆ سەرەتا",
-        callback_data: "main_menu"
-      }
-    ]]
+    [
+      [
+        {
+          text: "⬅️ گەڕانەوە بۆ سەرەتا",
+          callback_data: "main_menu"
+        }
+      ]
+    ]
   );
 }
+
+
+/* =========================================================
+   D1
+   ========================================================= */
 
 async function getPeople(env) {
   const result = await env.DB.prepare(`
@@ -382,27 +417,49 @@ async function getPerson(env, id) {
     FROM people
     WHERE id = ?
     LIMIT 1
-  `).bind(id).first();
+  `)
+    .bind(id)
+    .first();
 }
 
+
+/* =========================================================
+   موالید
+   ========================================================= */
+
 function getBirth(person) {
-  const more = String(person.more || "");
+  const more = String(
+    person.more || ""
+  );
 
   const labeled = more.match(
     /(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\d]{0,15}((?:19|20)\d{2})/i
   );
 
-  if (labeled) return labeled[1];
+  if (labeled) {
+    return labeled[1];
+  }
 
-  const year = more.match(/\b((?:19|20)\d{2})\b/);
+  const year = more.match(
+    /\b((?:19|20)\d{2})\b/
+  );
 
   return year ? year[1] : "";
 }
 
-function cleanMore(more, birth) {
-  let text = String(more || "").trim();
 
-  if (!text || !birth) return text;
+/* =========================================================
+   پاککردنەوەی زانیاری زیاتر
+   ========================================================= */
+
+function cleanMore(more, birth) {
+  let text = String(
+    more || ""
+  ).trim();
+
+  if (!text || !birth) {
+    return text;
+  }
 
   text = text.replace(
     new RegExp(
@@ -414,6 +471,11 @@ function cleanMore(more, birth) {
 
   return text.trim();
 }
+
+
+/* =========================================================
+   Main Menu
+   ========================================================= */
 
 async function sendMainMenu(token, chatId) {
   await sendMessageWithKeyboard(
@@ -437,6 +499,11 @@ async function sendMainMenu(token, chatId) {
   );
 }
 
+
+/* =========================================================
+   Telegram Send Message
+   ========================================================= */
+
 async function sendMessage(token, chatId, text) {
   return fetch(
     `https://api.telegram.org/bot${token}/sendMessage`,
@@ -452,6 +519,7 @@ async function sendMessage(token, chatId, text) {
     }
   );
 }
+
 
 async function sendMessageWithKeyboard(
   token,
@@ -477,6 +545,7 @@ async function sendMessageWithKeyboard(
   );
 }
 
+
 async function answerCallback(
   token,
   callbackId,
@@ -498,7 +567,16 @@ async function answerCallback(
   );
 }
 
-async function setMode(env, chatId, mode) {
+
+/* =========================================================
+   Session
+   ========================================================= */
+
+async function setMode(
+  env,
+  chatId,
+  mode
+) {
   await env.DB.prepare(`
     CREATE TABLE IF NOT EXISTS bot_sessions (
       chat_id TEXT PRIMARY KEY,
@@ -507,14 +585,22 @@ async function setMode(env, chatId, mode) {
   `).run();
 
   await env.DB.prepare(`
-    INSERT OR REPLACE INTO bot_sessions (chat_id, mode)
+    INSERT OR REPLACE INTO bot_sessions
+      (chat_id, mode)
     VALUES (?, ?)
   `)
-    .bind(String(chatId), mode)
+    .bind(
+      String(chatId),
+      mode
+    )
     .run();
 }
 
-async function getMode(env, chatId) {
+
+async function getMode(
+  env,
+  chatId
+) {
   await env.DB.prepare(`
     CREATE TABLE IF NOT EXISTS bot_sessions (
       chat_id TEXT PRIMARY KEY,
@@ -523,7 +609,8 @@ async function getMode(env, chatId) {
   `).run();
 
   const row = await env.DB.prepare(`
-    SELECT mode FROM bot_sessions
+    SELECT mode
+    FROM bot_sessions
     WHERE chat_id = ?
   `)
     .bind(String(chatId))
@@ -531,6 +618,11 @@ async function getMode(env, chatId) {
 
   return row?.mode || "menu";
 }
+
+
+/* =========================================================
+   Normalize Name
+   ========================================================= */
 
 function normalizeName(value) {
   return String(value || "")
@@ -543,6 +635,11 @@ function normalizeName(value) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+
+/* =========================================================
+   Normalize Phone
+   ========================================================= */
 
 function normalizePhone(value) {
   return String(value || "")

@@ -1,17 +1,19 @@
-const CORS_HEADERS = {
+const CORS = {
   "Access-Control-Allow-Origin": "https://blackitking.github.io",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Import-Key",
-  "Access-Control-Max-Age": "86400"
+  "Access-Control-Allow-Headers": "Content-Type, X-Import-Key"
 };
 
-function corsResponse(body, status = 200, extraHeaders = {}) {
+function res(body, status = 200, headers = {}) {
   return new Response(body, {
     status,
-    headers: {
-      ...CORS_HEADERS,
-      ...extraHeaders
-    }
+    headers: { ...CORS, ...headers }
+  });
+}
+
+function json(data, status = 200) {
+  return res(JSON.stringify(data), status, {
+    "Content-Type": "application/json"
   });
 }
 
@@ -19,326 +21,513 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS
-    if (request.method === "OPTIONS") {
-      return corsResponse(null, 204);
+    if (request.method === "OPTIONS") return res(null, 204);
+
+    if (url.pathname === "/") {
+      return new Response("Data Zanyari Worker is running.");
     }
 
-    // =========================
-    // IMPORT DATA TO D1
-    // =========================
     if (url.pathname === "/api/import" && request.method === "POST") {
-      try {
-        const key = request.headers.get("X-Import-Key");
-
-        if (!env.IMPORT_KEY || key !== env.IMPORT_KEY) {
-          return corsResponse("Unauthorized", 401);
-        }
-
-        const body = await request.json();
-        const people = body.people;
-
-        if (!Array.isArray(people)) {
-          return corsResponse(
-            JSON.stringify({
-              ok: false,
-              error: "people must be an array"
-            }),
-            400,
-            {
-              "Content-Type": "application/json"
-            }
-          );
-        }
-
-        let count = 0;
-
-        for (let i = 0; i < people.length; i += 50) {
-          const chunk = people.slice(i, i + 50);
-
-          const statements = chunk.map((person) => {
-            const id = String(
-              person.id || crypto.randomUUID()
-            );
-
-            const name = String(person.name || "");
-            const phone = String(person.phone || "");
-            const more = String(person.more || "");
-
-            return env.DB.prepare(`
-              INSERT OR REPLACE INTO people
-              (id, name, phone, more)
-              VALUES (?, ?, ?, ?)
-            `).bind(
-              id,
-              name,
-              phone,
-              more
-            );
-          });
-
-          await env.DB.batch(statements);
-          count += chunk.length;
-        }
-
-        return corsResponse(
-          JSON.stringify({
-            ok: true,
-            imported: count
-          }),
-          200,
-          {
-            "Content-Type": "application/json"
-          }
-        );
-
-      } catch (error) {
-        console.error("IMPORT ERROR:", error);
-
-        return corsResponse(
-          JSON.stringify({
-            ok: false,
-            error: String(error)
-          }),
-          500,
-          {
-            "Content-Type": "application/json"
-          }
-        );
-      }
+      return importData(request, env);
     }
 
-    // =========================
-    // TELEGRAM WEBHOOK
-    // =========================
-    if (
-      url.pathname === "/telegram/webhook" &&
-      request.method === "POST"
-    ) {
+    if (url.pathname === "/telegram/webhook" && request.method === "POST") {
       try {
         const update = await request.json();
-
-        await handleTelegram(update, env);
-
+        await telegram(update, env);
         return new Response("OK");
-
-      } catch (error) {
-        console.error("TELEGRAM ERROR:", error);
-
-        return new Response("ERROR", {
-          status: 500
-        });
+      } catch (e) {
+        console.error(e);
+        return new Response("ERROR", { status: 500 });
       }
     }
 
-    // =========================
-    // WORKER TEST
-    // =========================
-    if (url.pathname === "/") {
-      return new Response(
-        "Data Zanyari Worker is running."
-      );
-    }
-
-    return new Response("Not Found", {
-      status: 404
-    });
+    return new Response("Not Found", { status: 404 });
   }
 };
 
 
-// ========================================
-// TELEGRAM
-// ========================================
+/* =========================
+   IMPORT DATA
+========================= */
 
-async function handleTelegram(update, env) {
-  const message = update.message;
-
-  if (!message || !message.text) {
-    return;
-  }
-
-  const chatId = message.chat.id;
-  const text = message.text.trim();
-
-  // Only admin
-  if (String(chatId) !== String(env.ADMIN_ID)) {
-    await sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "ببورە، ئەم بۆتە تەنها بۆ بەکارهێنانی ڕێگەپێدراوە."
-    );
-
-    return;
-  }
-
-  // /start
-  if (text === "/start") {
-    await sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "بەخێربێیت 👋\n\nناوی دوانی/سیانی یان ژمارەی تەلەفون بنووسە بۆ گەڕان."
-    );
-
-    return;
-  }
-
-  // /count
-  if (text === "/count") {
-    try {
-      const result = await env.DB
-        .prepare("SELECT COUNT(*) AS count FROM people")
-        .first();
-
-      await sendMessage(
-        env.BOT_TOKEN,
-        chatId,
-        `📊 کۆی داتا: ${result?.count || 0}`
-      );
-
-    } catch (error) {
-      await sendMessage(
-        env.BOT_TOKEN,
-        chatId,
-        "❌ کێشەی D1 هەیە:\n" + String(error)
-      );
-    }
-
-    return;
-  }
-
-  // =========================
-  // PHONE SEARCH
-  // =========================
-
-  const isPhone = /^[+\d\s()-]+$/.test(text);
-
+async function importData(request, env) {
   try {
-    let results = [];
+    const key = request.headers.get("X-Import-Key");
 
-    if (isPhone) {
-      const searchPhone = normalizePhone(text);
-
-      // هەموو داتا بخوێنەوە بۆ ئەوەی
-      // ژمارەی بە شێوەی جیاواز نووسراو بدۆزرێتەوە
-      const result = await env.DB.prepare(`
-        SELECT id, name, phone, more
-        FROM people
-        LIMIT 10000
-      `).all();
-
-      results = (result.results || [])
-        .filter((person) => {
-          const dbPhone = normalizePhone(person.phone);
-
-          return dbPhone.includes(searchPhone);
-        })
-        .slice(0, 20);
-
-    } else {
-
-      // =========================
-      // NAME SEARCH
-      // =========================
-
-      const words = normalizeName(text)
-        .split(/\s+/)
-        .filter(Boolean);
-
-      if (words.length < 2) {
-        await sendMessage(
-          env.BOT_TOKEN,
-          chatId,
-          "تکایە ناوی دوانی یان سیانی بنووسە."
-        );
-
-        return;
-      }
-
-      const result = await env.DB.prepare(`
-        SELECT id, name, phone, more
-        FROM people
-        LIMIT 10000
-      `).all();
-
-      results = (result.results || [])
-        .filter((person) => {
-
-          const nameWords = normalizeName(person.name)
-            .split(/\s+/)
-            .filter(Boolean);
-
-          // هەر وشەی گەڕان دەبێت
-          // لە سەرەتای یەکێک لە وشەکانی ناو دەست پێ بکات
-          return words.every((searchWord) =>
-            nameWords.some((nameWord) =>
-              nameWord.startsWith(searchWord)
-            )
-          );
-        })
-        .slice(0, 20);
+    if (!env.IMPORT_KEY || key !== env.IMPORT_KEY) {
+      return res("Unauthorized", 401);
     }
 
-    // =========================
-    // NO RESULT
-    // =========================
+    const body = await request.json();
+    const people = body.people;
 
-    if (!results.length) {
-      await sendMessage(
-        env.BOT_TOKEN,
-        chatId,
-        "❌ هیچ داتایەک نەدۆزرایەوە."
-      );
-
-      return;
+    if (!Array.isArray(people)) {
+      return json({ ok: false, error: "people must be an array" }, 400);
     }
 
-    // =========================
-    // RESULTS
-    // =========================
+    for (let i = 0; i < people.length; i += 50) {
+      const chunk = people.slice(i, i + 50);
 
-    let output =
-      `🔎 ئەنجامەکان: ${results.length}\n\n`;
+      const statements = chunk.map(p => {
+        const id = String(p.id || crypto.randomUUID());
+        const name = String(p.name || "");
+        const phone = String(p.phone || "");
+        const more = String(p.more || "");
 
-    for (const person of results) {
+        return env.DB.prepare(`
+          INSERT OR REPLACE INTO people
+          (id, name, phone, more)
+          VALUES (?, ?, ?, ?)
+        `).bind(id, name, phone, more);
+      });
 
-      output += `👤 ناو: ${person.name || "-"}\n`;
-      output += `📱 تەلەفون: ${person.phone || "-"}`;
-
-      if (person.more) {
-        output += `\n📝 زانیاری زیاتر: ${person.more}`;
-      }
-
-      output += "\n\n";
+      await env.DB.batch(statements);
     }
 
-    await sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      output
-    );
+    return json({
+      ok: true,
+      imported: people.length
+    });
 
-  } catch (error) {
-
-    console.error("SEARCH ERROR:", error);
-
-    await sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "❌ هەڵەیەک ڕوویدا لە گەڕان:\n\n" +
-      String(error)
-    );
+  } catch (e) {
+    console.error("IMPORT ERROR:", e);
+    return json({
+      ok: false,
+      error: String(e)
+    }, 500);
   }
 }
 
 
-// ========================================
-// SEND TELEGRAM MESSAGE
-// ========================================
+/* =========================
+   TELEGRAM
+========================= */
 
-async function sendMessage(token, chatId, text) {
-  await fetch(
-    `https://api.telegram.org/bot${token}/sendMessage`,
+async function telegram(update, env) {
+
+  if (update.callback_query) {
+    await callback(update.callback_query, env);
+    return;
+  }
+
+  const message = update.message;
+
+  if (!message || !message.text) return;
+
+  const chatId = message.chat.id;
+  const text = message.text.trim();
+
+  if (String(chatId) !== String(env.ADMIN_ID)) {
+    await send(
+      env,
+      chatId,
+      "ببورە، ئەم بۆتە تەنها بۆ بەکارهێنانی ڕێگەپێدراوە."
+    );
+    return;
+  }
+
+  if (text === "/start") {
+    await setMode(env, chatId, "menu");
+    await menu(env, chatId);
+    return;
+  }
+
+  if (text === "/count") {
+    const r = await env.DB
+      .prepare("SELECT COUNT(*) AS count FROM people")
+      .first();
+
+    await send(
+      env,
+      chatId,
+      `📊 کۆی داتا: ${r?.count || 0}`
+    );
+
+    return;
+  }
+
+  const mode = await getMode(env, chatId);
+
+  if (mode === "name") {
+    await searchName(env, chatId, text);
+    return;
+  }
+
+  if (mode === "phone") {
+    await searchPhone(env, chatId, text);
+    return;
+  }
+
+  await menu(env, chatId);
+}
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+async function callback(query, env) {
+
+  const chatId = query.message?.chat?.id;
+
+  if (!chatId) return;
+
+  if (String(chatId) !== String(env.ADMIN_ID)) {
+    await answer(env, query.id, "ڕێگەپێدراو نییت.");
+    return;
+  }
+
+  const data = query.data || "";
+
+  if (data === "name") {
+
+    await setMode(env, chatId, "name");
+
+    await answer(env, query.id);
+
+    await send(
+      env,
+      chatId,
+      "👤 تکایە ناوی کەسەکە بنووسە:"
+    );
+
+    return;
+  }
+
+  if (data === "phone") {
+
+    await setMode(env, chatId, "phone");
+
+    await answer(env, query.id);
+
+    await send(
+      env,
+      chatId,
+      "📱 تکایە ژمارەی تەلەفون بنووسە:"
+    );
+
+    return;
+  }
+
+  if (data === "menu") {
+
+    await setMode(env, chatId, "menu");
+
+    await answer(env, query.id);
+
+    await menu(env, chatId);
+
+    return;
+  }
+
+  if (data.startsWith("person:")) {
+
+    await answer(env, query.id);
+
+    const id = data.substring(7);
+
+    await showPerson(env, chatId, id);
+  }
+}
+
+
+/* =========================
+   MAIN MENU
+========================= */
+
+async function menu(env, chatId) {
+
+  await keyboard(
+    env,
+    chatId,
+
+    "بەخێربێیت 👋\n\nتکایە دانەیەکیان هەڵبژێرە:",
+
+    [
+      [
+        {
+          text: "👤 گەڕان بە ناو",
+          callback_data: "name"
+        }
+      ],
+      [
+        {
+          text: "📱 ژمارەی تەلەفون",
+          callback_data: "phone"
+        }
+      ]
+    ]
+  );
+}
+
+
+/* =========================
+   NAME SEARCH
+========================= */
+
+async function searchName(env, chatId, text) {
+
+  const words = normalize(text)
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) {
+    await send(
+      env,
+      chatId,
+      "👤 تکایە ناوێک بنووسە."
+    );
+    return;
+  }
+
+  const people = await getPeople(env);
+
+  const results = people.filter(person => {
+
+    const nameWords = normalize(person.name)
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return words.every(searchWord =>
+      nameWords.some(nameWord =>
+        nameWord.startsWith(searchWord)
+      )
+    );
+
+  }).slice(0, 50);
+
+
+  if (!results.length) {
+
+    await send(
+      env,
+      chatId,
+      "❌ هیچ کەسێک بەو ناوە نەدۆزرایەوە."
+    );
+
+    return;
+  }
+
+
+  const buttons = results.map(person => {
+
+    const birth = getBirth(person);
+
+    const title = birth
+      ? `👤 ${person.name} — 📅 ${birth}`
+      : `👤 ${person.name}`;
+
+    return [{
+      text: title.slice(0, 60),
+      callback_data: `person:${person.id}`
+    }];
+
+  });
+
+
+  buttons.push([
+    {
+      text: "⬅️ گەڕانەوە",
+      callback_data: "menu"
+    }
+  ]);
+
+
+  await keyboard(
+    env,
+    chatId,
+
+    `🔎 ${results.length} ئەنجام دۆزرایەوە.\n\nیەکێکیان هەڵبژێرە:`,
+
+    buttons
+  );
+}
+
+
+/* =========================
+   PHONE SEARCH
+========================= */
+
+async function searchPhone(env, chatId, text) {
+
+  const phone = normalizePhone(text);
+
+  if (!phone) {
+
+    await send(
+      env,
+      chatId,
+      "📱 تکایە ژمارەی تەلەفون بنووسە."
+    );
+
+    return;
+  }
+
+
+  const people = await getPeople(env);
+
+  const results = people.filter(person =>
+    normalizePhone(person.phone).includes(phone)
+  ).slice(0, 50);
+
+
+  if (!results.length) {
+
+    await send(
+      env,
+      chatId,
+      "❌ هیچ کەسێک بەو ژمارەیە نەدۆزرایەوە."
+    );
+
+    return;
+  }
+
+
+  const buttons = results.map(person => {
+
+    const birth = getBirth(person);
+
+    const title = birth
+      ? `👤 ${person.name} — 📅 ${birth}`
+      : `👤 ${person.name}`;
+
+    return [{
+      text: title.slice(0, 60),
+      callback_data: `person:${person.id}`
+    }];
+
+  });
+
+
+  buttons.push([
+    {
+      text: "⬅️ گەڕانەوە",
+      callback_data: "menu"
+    }
+  ]);
+
+
+  await keyboard(
+    env,
+    chatId,
+
+    `📱 ${results.length} ئەنجام دۆزرایەوە.\n\nیەکێکیان هەڵبژێرە:`,
+
+    buttons
+  );
+}
+
+
+/* =========================
+   SHOW PERSON
+========================= */
+
+async function showPerson(env, chatId, id) {
+
+  const person = await env.DB
+    .prepare(`
+      SELECT id, name, phone, more
+      FROM people
+      WHERE id = ?
+      LIMIT 1
+    `)
+    .bind(id)
+    .first();
+
+
+  if (!person) {
+
+    await send(
+      env,
+      chatId,
+      "❌ داتا نەدۆزرایەوە."
+    );
+
+    return;
+  }
+
+
+  const birth = getBirth(person);
+
+  let text =
+    `👤 ناو: ${person.name || "-"}\n` +
+    `📅 موالید: ${birth || "لە داتا نییە"}\n` +
+    `📱 تەلەفون: ${person.phone || "-"}`;
+
+
+  if (person.more) {
+    text += `\n📝 زانیاری زیاتر: ${person.more}`;
+  }
+
+
+  await keyboard(
+    env,
+    chatId,
+    text,
+    [
+      [
+        {
+          text: "⬅️ گەڕانەوە بۆ سەرەتا",
+          callback_data: "menu"
+        }
+      ]
+    ]
+  );
+}
+
+
+/* =========================
+   GET DATA
+========================= */
+
+async function getPeople(env) {
+
+  const result = await env.DB
+    .prepare(`
+      SELECT id, name, phone, more
+      FROM people
+      LIMIT 10000
+    `)
+    .all();
+
+  return result.results || [];
+}
+
+
+/* =========================
+   BIRTH
+========================= */
+
+function getBirth(person) {
+
+  const more = String(person.more || "");
+
+  const labeled = more.match(
+    /(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\d]{0,15}((?:19|20)\d{2})/i
+  );
+
+  if (labeled) {
+    return labeled[1];
+  }
+
+
+  const year = more.match(
+    /\b((?:19|20)\d{2})\b/
+  );
+
+  return year ? year[1] : "";
+}
+
+
+/* =========================
+   TELEGRAM API
+========================= */
+
+async function send(env, chatId, text) {
+
+  return fetch(
+    `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,
     {
       method: "POST",
       headers: {
@@ -346,34 +535,126 @@ async function sendMessage(token, chatId, text) {
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text.slice(0, 4000)
+        text: String(text).slice(0, 4000)
       })
     }
   );
 }
 
 
-// ========================================
-// NORMALIZE NAME
-// ========================================
+async function keyboard(
+  env,
+  chatId,
+  text,
+  buttons
+) {
 
-function normalizeName(value) {
+  return fetch(
+    `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: String(text).slice(0, 4000),
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      })
+    }
+  );
+}
+
+
+async function answer(env, id, text = "") {
+
+  return fetch(
+    `https://api.telegram.org/bot${env.BOT_TOKEN}/answerCallbackQuery`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        callback_query_id: id,
+        text,
+        show_alert: false
+      })
+    }
+  );
+}
+
+
+/* =========================
+   MODE
+========================= */
+
+async function setMode(env, chatId, mode) {
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS bot_sessions (
+      chat_id TEXT PRIMARY KEY,
+      mode TEXT NOT NULL
+    )
+  `).run();
+
+
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO bot_sessions
+    (chat_id, mode)
+    VALUES (?, ?)
+  `)
+  .bind(String(chatId), mode)
+  .run();
+}
+
+
+async function getMode(env, chatId) {
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS bot_sessions (
+      chat_id TEXT PRIMARY KEY,
+      mode TEXT NOT NULL
+    )
+  `).run();
+
+
+  const row = await env.DB
+    .prepare(`
+      SELECT mode
+      FROM bot_sessions
+      WHERE chat_id = ?
+    `)
+    .bind(String(chatId))
+    .first();
+
+
+  return row?.mode || "menu";
+}
+
+
+/* =========================
+   NORMALIZE
+========================= */
+
+function normalize(value) {
+
   return String(value || "")
     .toLowerCase()
     .replace(/[ًٌٍَُِّْـ]/g, "")
     .replace(/[يى]/g, "ی")
     .replace(/[ك]/g, "ک")
     .replace(/[ۀة]/g, "ە")
+    .replace(/[ؤ]/g, "ۆ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 
-// ========================================
-// NORMALIZE PHONE
-// ========================================
-
 function normalizePhone(value) {
+
   return String(value || "")
     .replace(/[^\d+]/g, "");
 }

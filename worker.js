@@ -25,20 +25,19 @@ function json(data, status = 200) {
   );
 }
 
-
 export default {
 
   async fetch(request, env) {
 
     const url = new URL(request.url);
 
-
-    /* CORS */
+    /* =========================
+       CORS
+       ========================= */
 
     if (request.method === "OPTIONS") {
       return response(null, 204);
     }
-
 
     /* =========================
        WEBSITE NAME SEARCH
@@ -51,7 +50,6 @@ export default {
       return searchNameAPI(request, env);
     }
 
-
     /* =========================
        WEBSITE PHONE SEARCH
        ========================= */
@@ -62,7 +60,6 @@ export default {
     ) {
       return searchPhoneAPI(request, env);
     }
-
 
     /* =========================
        IMPORT
@@ -75,6 +72,16 @@ export default {
       return importPeople(request, env);
     }
 
+    /* =========================
+       TELEGRAM EXPORT
+       ========================= */
+
+    if (
+      url.pathname === "/api/telegram/export" &&
+      request.method === "POST"
+    ) {
+      return telegramExport(request, env);
+    }
 
     /* =========================
        TELEGRAM WEBHOOK
@@ -87,15 +94,20 @@ export default {
 
       try {
 
-        const update =
-          await request.json();
+        const update = await request.json();
 
         await handleTelegram(
           update,
           env
         );
 
-        return new Response("OK");
+        return new Response(
+          "OK",
+          {
+            status: 200,
+            headers: CORS_HEADERS
+          }
+        );
 
       } catch (error) {
 
@@ -106,11 +118,13 @@ export default {
 
         return new Response(
           "ERROR",
-          { status: 500 }
+          {
+            status: 500,
+            headers: CORS_HEADERS
+          }
         );
       }
     }
-
 
     /* =========================
        ROOT
@@ -119,11 +133,14 @@ export default {
     if (url.pathname === "/") {
 
       return new Response(
-        "Data Zanyari Worker is running."
+        "Data Zanyari Worker is running.",
+        {
+          status: 200,
+          headers: CORS_HEADERS
+        }
       );
 
     }
-
 
     return response(
       JSON.stringify({
@@ -159,7 +176,6 @@ async function searchNameAPI(request, env) {
     const search =
       normalizeName(query);
 
-
     if (!search) {
 
       return json({
@@ -169,7 +185,6 @@ async function searchNameAPI(request, env) {
 
     }
 
-
     const result =
       await env.DB.prepare(`
         SELECT id, name, phone, more
@@ -178,16 +193,13 @@ async function searchNameAPI(request, env) {
         LIMIT 10000
       `).all();
 
-
     const people =
       result.results || [];
-
 
     const words =
       search
         .split(/\s+/)
         .filter(Boolean);
-
 
     const results =
       people
@@ -196,12 +208,8 @@ async function searchNameAPI(request, env) {
           const name =
             normalizeName(person.name);
 
-
           const more =
             normalizeName(person.more);
-
-
-          /* ناوی تەواو */
 
           if (
             name.includes(search)
@@ -209,14 +217,10 @@ async function searchNameAPI(request, env) {
             return true;
           }
 
-
-          /* هەر وشەیەک لە ناو */
-
           const nameWords =
             name
               .split(/\s+/)
               .filter(Boolean);
-
 
           const allWords =
             words.every(word =>
@@ -225,13 +229,9 @@ async function searchNameAPI(request, env) {
               )
             );
 
-
           if (allWords) {
             return true;
           }
-
-
-          /* گەڕان لە more ـیش */
 
           if (
             more &&
@@ -240,12 +240,10 @@ async function searchNameAPI(request, env) {
             return true;
           }
 
-
           return false;
 
         })
         .slice(0, 50);
-
 
     return json({
       ok: true,
@@ -253,14 +251,12 @@ async function searchNameAPI(request, env) {
       count: results.length
     });
 
-
   } catch (error) {
 
     console.error(
       "NAME API ERROR:",
       error
     );
-
 
     return json(
       {
@@ -292,7 +288,6 @@ async function searchPhoneAPI(request, env) {
     const phone =
       normalizePhone(query);
 
-
     if (!phone) {
 
       return json({
@@ -302,7 +297,6 @@ async function searchPhoneAPI(request, env) {
 
     }
 
-
     const result =
       await env.DB.prepare(`
         SELECT id, name, phone, more
@@ -311,10 +305,8 @@ async function searchPhoneAPI(request, env) {
         LIMIT 10000
       `).all();
 
-
     const people =
       result.results || [];
-
 
     const results =
       people
@@ -327,13 +319,11 @@ async function searchPhoneAPI(request, env) {
         })
         .slice(0, 50);
 
-
     return json({
       ok: true,
       people: results,
       count: results.length
     });
-
 
   } catch (error) {
 
@@ -341,7 +331,6 @@ async function searchPhoneAPI(request, env) {
       "PHONE API ERROR:",
       error
     );
-
 
     return json(
       {
@@ -369,7 +358,6 @@ async function importPeople(request, env) {
         "X-Import-Key"
       );
 
-
     if (
       !env.IMPORT_KEY ||
       key !== env.IMPORT_KEY
@@ -382,14 +370,11 @@ async function importPeople(request, env) {
 
     }
 
-
     const body =
       await request.json();
 
-
     const people =
       body.people;
-
 
     if (!Array.isArray(people)) {
 
@@ -402,7 +387,6 @@ async function importPeople(request, env) {
       );
 
     }
-
 
     /*
        داتاکانی کۆن نایسڕێنەوە.
@@ -421,7 +405,6 @@ async function importPeople(request, env) {
           i + 50
         );
 
-
       const statements =
         chunk.map(person => {
 
@@ -431,24 +414,20 @@ async function importPeople(request, env) {
               crypto.randomUUID()
             );
 
-
           const name =
             String(
               person.name || ""
             );
-
 
           const phone =
             String(
               person.phone || ""
             );
 
-
           const more =
             String(
               person.more || ""
             );
-
 
           return env.DB
             .prepare(`
@@ -465,19 +444,16 @@ async function importPeople(request, env) {
 
         });
 
-
       await env.DB.batch(
         statements
       );
 
     }
 
-
     return json({
       ok: true,
       imported: people.length
     });
-
 
   } catch (error) {
 
@@ -486,6 +462,273 @@ async function importPeople(request, env) {
       error
     );
 
+    return json(
+      {
+        ok: false,
+        error: String(error)
+      },
+      500
+    );
+
+  }
+
+}
+
+
+/* =====================================================
+   TELEGRAM EXPORT
+   ===================================================== */
+
+async function telegramExport(
+  request,
+  env
+) {
+
+  try {
+
+    /*
+       Telegram Bot Token
+       دەبێت لە Cloudflare Secret بێت
+       بە ناوی BOT_TOKEN
+    */
+
+    if (!env.BOT_TOKEN) {
+
+      return json(
+        {
+          ok: false,
+          error: "BOT_TOKEN is not configured"
+        },
+        500
+      );
+
+    }
+
+    /*
+       ADMIN_ID
+       بۆ ناردنی داتا بۆ چاتی خۆت
+    */
+
+    if (!env.ADMIN_ID) {
+
+      return json(
+        {
+          ok: false,
+          error: "ADMIN_ID is not configured"
+        },
+        500
+      );
+
+    }
+
+    const body =
+      await request.json();
+
+    const people =
+      body.people;
+
+    if (!Array.isArray(people)) {
+
+      return json(
+        {
+          ok: false,
+          error: "people must be an array"
+        },
+        400
+      );
+
+    }
+
+    if (!people.length) {
+
+      return json(
+        {
+          ok: false,
+          error: "No data to export"
+        },
+        400
+      );
+
+    }
+
+    /*
+       Telegram سنووری نزیکەی 4096 character ـە.
+       بۆیە داتا بە چەند بەشێک دەنێردرێت.
+    */
+
+    const messages = [];
+
+    let currentMessage =
+      "📦 گواستنەوەی هەموو داتا\n" +
+      "━━━━━━━━━━━━━━━━━━\n" +
+      `📊 کۆی تۆمارەکان: ${people.length}\n\n`;
+
+    for (
+      let i = 0;
+      i < people.length;
+      i++
+    ) {
+
+      const person =
+        people[i] || {};
+
+      let item =
+        `#${i + 1}\n`;
+
+      item +=
+        `👤 ناو: ${person.name || "-"}\n`;
+
+      item +=
+        `📱 تەلەفون: ${person.phone || "-"}\n`;
+
+      item +=
+        `📝 زانیاری زیاتر: ${person.more || "-"}\n`;
+
+      if (
+        person.id !== undefined &&
+        person.id !== null
+      ) {
+
+        item +=
+          `🆔 ID: ${person.id}\n`;
+
+      }
+
+      item += "\n";
+
+      /*
+         ئەگەر بەشی ئێستا زۆر گەورە بوو،
+         دەینێرین و بەشی نوێ دروست دەکەین.
+      */
+
+      if (
+        currentMessage.length +
+        item.length >
+        3500
+      ) {
+
+        messages.push(
+          currentMessage
+        );
+
+        currentMessage = "";
+
+      }
+
+      currentMessage +=
+        item;
+
+    }
+
+    if (
+      currentMessage.trim()
+    ) {
+
+      messages.push(
+        currentMessage
+      );
+
+    }
+
+    /*
+       ناردنی هەموو بەشەکان بۆ Telegram
+    */
+
+    for (
+      let i = 0;
+      i < messages.length;
+      i++
+    ) {
+
+      let message =
+        messages[i];
+
+      if (
+        messages.length > 1
+      ) {
+
+        message =
+          `📦 بەشی ${i + 1} لە ${messages.length}\n\n` +
+          message;
+
+      }
+
+      const telegramResponse =
+        await fetch(
+          `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+              chat_id:
+                env.ADMIN_ID,
+
+              text:
+                message
+            })
+          }
+        );
+
+      let telegramResult;
+
+      try {
+
+        telegramResult =
+          await telegramResponse.json();
+
+      } catch {
+
+        telegramResult = {
+          ok: false,
+          description:
+            "Invalid Telegram response"
+        };
+
+      }
+
+      if (
+        !telegramResponse.ok ||
+        !telegramResult.ok
+      ) {
+
+        console.error(
+          "TELEGRAM EXPORT ERROR:",
+          telegramResult
+        );
+
+        return json(
+          {
+            ok: false,
+            error:
+              telegramResult.description ||
+              "Telegram API error"
+          },
+          500
+        );
+
+      }
+
+    }
+
+    return json({
+      ok: true,
+      exported:
+        people.length,
+      messages:
+        messages.length
+    });
+
+  } catch (error) {
+
+    console.error(
+      "TELEGRAM EXPORT ERROR:",
+      error
+    );
 
     return json(
       {
@@ -521,10 +764,8 @@ async function handleTelegram(
     return;
   }
 
-
   const message =
     update.message;
-
 
   if (
     !message ||
@@ -533,14 +774,11 @@ async function handleTelegram(
     return;
   }
 
-
   const chatId =
     message.chat.id;
 
-
   const text =
     message.text.trim();
-
 
   if (
     String(chatId) !==
@@ -555,7 +793,6 @@ async function handleTelegram(
 
     return;
   }
-
 
   if (text === "/start") {
 
@@ -573,7 +810,6 @@ async function handleTelegram(
     return;
   }
 
-
   if (text === "/count") {
 
     const result =
@@ -582,7 +818,6 @@ async function handleTelegram(
           "SELECT COUNT(*) AS count FROM people"
         )
         .first();
-
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -593,13 +828,11 @@ async function handleTelegram(
     return;
   }
 
-
   const mode =
     await getMode(
       env,
       chatId
     );
-
 
   if (mode === "name") {
 
@@ -612,7 +845,6 @@ async function handleTelegram(
     return;
   }
 
-
   if (mode === "phone") {
 
     await searchByPhone(
@@ -623,7 +855,6 @@ async function handleTelegram(
 
     return;
   }
-
 
   await sendMainMenu(
     env.BOT_TOKEN,
@@ -645,11 +876,9 @@ async function handleCallback(
   const chatId =
     query.message?.chat?.id;
 
-
   if (!chatId) {
     return;
   }
-
 
   if (
     String(chatId) !==
@@ -665,10 +894,8 @@ async function handleCallback(
     return;
   }
 
-
   const data =
     query.data || "";
-
 
   if (
     data === "search_name"
@@ -680,12 +907,10 @@ async function handleCallback(
       "name"
     );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -693,10 +918,8 @@ async function handleCallback(
       "👤 تکایە ناوی کەسەکە بنووسە:"
     );
 
-
     return;
   }
-
 
   if (
     data === "search_phone"
@@ -708,12 +931,10 @@ async function handleCallback(
       "phone"
     );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -721,10 +942,8 @@ async function handleCallback(
       "📱 تکایە ژمارەی تەلەفون بنووسە:"
     );
 
-
     return;
   }
-
 
   if (
     data === "main_menu"
@@ -736,22 +955,18 @@ async function handleCallback(
       "menu"
     );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await sendMainMenu(
       env.BOT_TOKEN,
       chatId
     );
 
-
     return;
   }
-
 
   if (
     data.startsWith("person:")
@@ -760,12 +975,10 @@ async function handleCallback(
     const id =
       data.slice(7);
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await showPerson(
       env,
@@ -791,7 +1004,6 @@ async function searchByName(
   const search =
     normalizeName(text);
 
-
   if (!search) {
 
     await sendMessage(
@@ -803,16 +1015,13 @@ async function searchByName(
     return;
   }
 
-
   const people =
     await getPeople(env);
-
 
   const words =
     search
       .split(/\s+/)
       .filter(Boolean);
-
 
   const results =
     people
@@ -823,12 +1032,10 @@ async function searchByName(
             person.name
           );
 
-
         const more =
           normalizeName(
             person.more
           );
-
 
         if (
           fullName.includes(search)
@@ -836,12 +1043,10 @@ async function searchByName(
           return true;
         }
 
-
         const nameWords =
           fullName
             .split(/\s+/)
             .filter(Boolean);
-
 
         const matches =
           words.every(word =>
@@ -850,11 +1055,9 @@ async function searchByName(
             )
           );
 
-
         if (matches) {
           return true;
         }
-
 
         if (
           more &&
@@ -863,12 +1066,10 @@ async function searchByName(
           return true;
         }
 
-
         return false;
 
       })
       .slice(0, 50);
-
 
   if (!results.length) {
 
@@ -881,23 +1082,22 @@ async function searchByName(
     return;
   }
 
-
   const buttons =
     results.map(person => {
 
       const birth =
         getBirth(person);
 
-
       const title =
         birth
           ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
           : `👤 ${person.name || "بێ ناو"}`;
 
-
       return [
         {
-          text: title.slice(0, 60),
+          text:
+            title.slice(0, 60),
+
           callback_data:
             `person:${String(person.id)}`
         }
@@ -905,14 +1105,12 @@ async function searchByName(
 
     });
 
-
   buttons.push([
     {
       text: "⬅️ گەڕانەوە",
       callback_data: "main_menu"
     }
   ]);
-
 
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
@@ -937,7 +1135,6 @@ async function searchByPhone(
   const phone =
     normalizePhone(text);
 
-
   if (!phone) {
 
     await sendMessage(
@@ -949,10 +1146,8 @@ async function searchByPhone(
     return;
   }
 
-
   const people =
     await getPeople(env);
-
 
   const results =
     people
@@ -962,7 +1157,6 @@ async function searchByPhone(
         ).includes(phone)
       )
       .slice(0, 50);
-
 
   if (!results.length) {
 
@@ -975,23 +1169,22 @@ async function searchByPhone(
     return;
   }
 
-
   const buttons =
     results.map(person => {
 
       const birth =
         getBirth(person);
 
-
       const label =
         birth
           ? `👤 ${person.name || "بێ ناو"} — 📅 ${birth}`
           : `👤 ${person.name || "بێ ناو"}`;
 
-
       return [
         {
-          text: label.slice(0, 60),
+          text:
+            label.slice(0, 60),
+
           callback_data:
             `person:${String(person.id)}`
         }
@@ -999,14 +1192,12 @@ async function searchByPhone(
 
     });
 
-
   buttons.push([
     {
       text: "⬅️ گەڕانەوە",
       callback_data: "main_menu"
     }
   ]);
-
 
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
@@ -1034,7 +1225,6 @@ async function showPerson(
       id
     );
 
-
   if (!person) {
 
     await sendMessage(
@@ -1046,10 +1236,8 @@ async function showPerson(
     return;
   }
 
-
   const birth =
     getBirth(person);
-
 
   let text =
     `👤 ناو: ${person.name || "-"}`;
@@ -1060,13 +1248,11 @@ async function showPerson(
   text +=
     `\n📱 تەلەفون: ${person.phone || "-"}`;
 
-
   const more =
     cleanMore(
       person.more,
       birth
     );
-
 
   if (more) {
 
@@ -1074,7 +1260,6 @@ async function showPerson(
       `\n📝 زانیاری زیاتر: ${more}`;
 
   }
-
 
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
@@ -1106,7 +1291,6 @@ async function getPeople(env) {
       LIMIT 10000
     `).all();
 
-
   return result.results || [];
 
 }
@@ -1124,11 +1308,9 @@ async function getPerson(
   const cleanId =
     String(id || "").trim();
 
-
   if (!cleanId) {
     return null;
   }
-
 
   let person =
     await env.DB
@@ -1141,27 +1323,18 @@ async function getPerson(
       .bind(cleanId)
       .first();
 
-
   if (person) {
     return person;
   }
 
-
-  /*
-     fallback:
-     ئەگەر ID ـەکە هەڵەی whitespace ـی تێدا هەبێت.
-  */
-
   const people =
     await getPeople(env);
-
 
   person =
     people.find(item =>
       String(item.id).trim() ===
       cleanId
     );
-
 
   return person || null;
 
@@ -1179,23 +1352,19 @@ function getBirth(person) {
       person.more || ""
     );
 
-
   const labeled =
     more.match(
       /(?:موالید|موڵید|میلاد|لەدایکبوون|birth|ساڵ)[^\d]{0,15}((?:19|20)\d{2})/i
     );
 
-
   if (labeled) {
     return labeled[1];
   }
-
 
   const year =
     more.match(
       /\b((?:19|20)\d{2})\b/
     );
-
 
   return year
     ? year[1]
@@ -1218,14 +1387,12 @@ function cleanMore(
       more || ""
     ).trim();
 
-
   if (
     !text ||
     !birth
   ) {
     return text;
   }
-
 
   text =
     text.replace(
@@ -1235,7 +1402,6 @@ function cleanMore(
       ),
       ""
     );
-
 
   return text.trim();
 
@@ -1288,16 +1454,20 @@ async function sendMessage(
     `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
+
       headers: {
         "content-type":
           "application/json"
       },
+
       body: JSON.stringify({
         chat_id: chatId,
-        text: String(text).slice(
-          0,
-          4000
-        )
+
+        text:
+          String(text).slice(
+            0,
+            4000
+          )
       })
     }
   );
@@ -1320,16 +1490,21 @@ async function sendMessageWithKeyboard(
     `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
+
       headers: {
         "content-type":
           "application/json"
       },
+
       body: JSON.stringify({
         chat_id: chatId,
-        text: String(text).slice(
-          0,
-          4000
-        ),
+
+        text:
+          String(text).slice(
+            0,
+            4000
+          ),
+
         reply_markup: {
           inline_keyboard:
             keyboard
@@ -1355,14 +1530,18 @@ async function answerCallback(
     `https://api.telegram.org/bot${token}/answerCallbackQuery`,
     {
       method: "POST",
+
       headers: {
         "content-type":
           "application/json"
       },
+
       body: JSON.stringify({
         callback_query_id:
           callbackId,
+
         text,
+
         show_alert: false
       })
     }
@@ -1387,7 +1566,6 @@ async function setMode(
       mode TEXT NOT NULL DEFAULT 'menu'
     )
   `).run();
-
 
   await env.DB.prepare(`
     INSERT OR REPLACE INTO bot_sessions
@@ -1415,7 +1593,6 @@ async function getMode(
     )
   `).run();
 
-
   const row =
     await env.DB.prepare(`
       SELECT mode
@@ -1426,7 +1603,6 @@ async function getMode(
       String(chatId)
     )
     .first();
-
 
   return row?.mode || "menu";
 

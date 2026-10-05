@@ -172,11 +172,8 @@ async function searchNameAPI(request, env) {
           const name =
             normalizeName(person.name);
 
-          const more =
-            normalizeName(person.more);
-
-          if (name.includes(search)) {
-            return true;
+          if (!name) {
+            return false;
           }
 
           const nameWords =
@@ -184,25 +181,16 @@ async function searchNameAPI(request, env) {
               .split(/\s+/)
               .filter(Boolean);
 
-          const allWords =
-            words.every(word =>
-              nameWords.some(nameWord =>
-                nameWord.includes(word)
-              )
-            );
+          /*
+             هەموو وشەکانی گەڕان دەبێت
+             بە تەواوی لە ناوەکەدا هەبن.
+          */
 
-          if (allWords) {
-            return true;
-          }
-
-          if (
-            more &&
-            more.includes(search)
-          ) {
-            return true;
-          }
-
-          return false;
+          return words.every(word =>
+            nameWords.some(nameWord =>
+              nameWord === word
+            )
+          );
 
         })
         .slice(0, 50);
@@ -653,7 +641,6 @@ async function handleTelegram(update, env) {
     message.text.trim();
 
   /*
-     هیچ ADMIN_ID ـێک لێرە نییە.
      هەموو بەکارهێنەران دەتوانن بۆتەکە بەکاربهێنن.
   */
 
@@ -741,7 +728,6 @@ async function handleCallback(query, env) {
   }
 
   /*
-     هیچ ADMIN_ID ـێک لێرە نییە.
      هەموو بەکارهێنەران دەتوانن callback بەکاربهێنن.
   */
 
@@ -869,11 +855,8 @@ async function searchByName(env, chatId, text) {
         const fullName =
           normalizeName(person.name);
 
-        const more =
-          normalizeName(person.more);
-
-        if (fullName.includes(search)) {
-          return true;
+        if (!fullName) {
+          return false;
         }
 
         const nameWords =
@@ -881,25 +864,24 @@ async function searchByName(env, chatId, text) {
             .split(/\s+/)
             .filter(Boolean);
 
-        const matches =
-          words.every(word =>
-            nameWords.some(nameWord =>
-              nameWord.includes(word)
-            )
-          );
+        /*
+           هەموو وشەکانی گەڕان دەبێت
+           بە تەواوی لە ناوەکەدا هەبن.
 
-        if (matches) {
-          return true;
-        }
+           نموونە:
 
-        if (
-          more &&
-          more.includes(search)
-        ) {
-          return true;
-        }
+           محەمەد عەلی
+           ✅ محەمەد عەلی
+           ✅ محەمەد عەلی حەسەن
+           ❌ خەندە عەلی
+           ❌ محەمەد حەسەن
+        */
 
-        return false;
+        return words.every(word =>
+          nameWords.some(nameWord =>
+            nameWord === word
+          )
+        );
 
       })
       .slice(0, 50);
@@ -909,7 +891,7 @@ async function searchByName(env, chatId, text) {
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
-      `❌ هیچ ئەنجامێک بۆ «${text}» نەدۆزرایەوە.`
+      `❌ ببورە، ئەم ناوە نەدۆزرایەوە.\n\n🔎 «${text}»`
     );
 
     return;

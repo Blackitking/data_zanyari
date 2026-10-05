@@ -67,32 +67,26 @@ export default {
       url.pathname === "/telegram/webhook" &&
       request.method === "POST"
     ) {
-
       try {
 
         const update = await request.json();
 
         await handleTelegram(update, env);
 
-        return new Response(
-          "OK",
-          {
-            status: 200,
-            headers: CORS_HEADERS
-          }
-        );
+        return new Response("OK", {
+          status: 200,
+          headers: CORS_HEADERS
+        });
 
       } catch (error) {
 
         console.error("TELEGRAM ERROR:", error);
 
-        return new Response(
-          "ERROR",
-          {
-            status: 500,
-            headers: CORS_HEADERS
-          }
-        );
+        return new Response("ERROR", {
+          status: 500,
+          headers: CORS_HEADERS
+        });
+
       }
     }
 
@@ -108,16 +102,10 @@ export default {
 
     }
 
-    return response(
-      JSON.stringify({
-        ok: false,
-        error: "Not Found"
-      }),
-      404,
-      {
-        "Content-Type": "application/json; charset=utf-8"
-      }
-    );
+    return json({
+      ok: false,
+      error: "Not Found"
+    }, 404);
 
   }
 
@@ -144,7 +132,8 @@ async function searchNameAPI(request, env) {
 
       return json({
         ok: true,
-        people: []
+        people: [],
+        count: 0
       });
 
     }
@@ -160,39 +149,14 @@ async function searchNameAPI(request, env) {
     const people =
       result.results || [];
 
-    const words =
-      search
-        .split(/\s+/)
-        .filter(Boolean);
-
     const results =
       people
-        .filter(person => {
-
-          const name =
-            normalizeName(person.name);
-
-          if (!name) {
-            return false;
-          }
-
-          const nameWords =
-            name
-              .split(/\s+/)
-              .filter(Boolean);
-
-          /*
-             هەموو وشەکانی گەڕان دەبێت
-             بە تەواوی لە ناوەکەدا هەبن.
-          */
-
-          return words.every(word =>
-            nameWords.some(nameWord =>
-              nameWord === word
-            )
-          );
-
-        })
+        .filter(person =>
+          exactNamePhraseMatch(
+            person.name,
+            search
+          )
+        )
         .slice(0, 50);
 
     return json({
@@ -205,13 +169,10 @@ async function searchNameAPI(request, env) {
 
     console.error("NAME API ERROR:", error);
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
 
   }
 
@@ -238,7 +199,8 @@ async function searchPhoneAPI(request, env) {
 
       return json({
         ok: true,
-        people: []
+        people: [],
+        count: 0
       });
 
     }
@@ -272,13 +234,10 @@ async function searchPhoneAPI(request, env) {
 
     console.error("PHONE API ERROR:", error);
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
 
   }
 
@@ -316,13 +275,10 @@ async function importPeople(request, env) {
 
     if (!Array.isArray(people)) {
 
-      return json(
-        {
-          ok: false,
-          error: "people must be an array"
-        },
-        400
-      );
+      return json({
+        ok: false,
+        error: "people must be an array"
+      }, 400);
 
     }
 
@@ -381,13 +337,10 @@ async function importPeople(request, env) {
 
     console.error("IMPORT ERROR:", error);
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
 
   }
 
@@ -404,25 +357,19 @@ async function telegramExport(request, env) {
 
     if (!env.BOT_TOKEN) {
 
-      return json(
-        {
-          ok: false,
-          error: "BOT_TOKEN is not configured"
-        },
-        500
-      );
+      return json({
+        ok: false,
+        error: "BOT_TOKEN is not configured"
+      }, 500);
 
     }
 
     if (!env.ADMIN_ID) {
 
-      return json(
-        {
-          ok: false,
-          error: "ADMIN_ID is not configured"
-        },
-        500
-      );
+      return json({
+        ok: false,
+        error: "ADMIN_ID is not configured"
+      }, 500);
 
     }
 
@@ -434,25 +381,19 @@ async function telegramExport(request, env) {
 
     if (!Array.isArray(people)) {
 
-      return json(
-        {
-          ok: false,
-          error: "people must be an array"
-        },
-        400
-      );
+      return json({
+        ok: false,
+        error: "people must be an array"
+      }, 400);
 
     }
 
     if (!people.length) {
 
-      return json(
-        {
-          ok: false,
-          error: "No data to export"
-        },
-        400
-      );
+      return json({
+        ok: false,
+        error: "No data to export"
+      }, 400);
 
     }
 
@@ -570,15 +511,12 @@ async function telegramExport(request, env) {
         telegramResult
       );
 
-      return json(
-        {
-          ok: false,
-          error:
-            telegramResult.description ||
-            "Telegram API error"
-        },
-        500
-      );
+      return json({
+        ok: false,
+        error:
+          telegramResult.description ||
+          "Telegram API error"
+      }, 500);
 
     }
 
@@ -595,13 +533,10 @@ async function telegramExport(request, env) {
       error
     );
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
 
   }
 
@@ -639,10 +574,6 @@ async function handleTelegram(update, env) {
 
   const text =
     message.text.trim();
-
-  /*
-     هەموو بەکارهێنەران دەتوانن بۆتەکە بەکاربهێنن.
-  */
 
   if (text === "/start") {
 
@@ -726,10 +657,6 @@ async function handleCallback(query, env) {
   if (!chatId) {
     return;
   }
-
-  /*
-     هەموو بەکارهێنەران دەتوانن callback بەکاربهێنن.
-  */
 
   const data =
     query.data || "";
@@ -843,47 +770,14 @@ async function searchByName(env, chatId, text) {
   const people =
     await getPeople(env);
 
-  const words =
-    search
-      .split(/\s+/)
-      .filter(Boolean);
-
   const results =
     people
-      .filter(person => {
-
-        const fullName =
-          normalizeName(person.name);
-
-        if (!fullName) {
-          return false;
-        }
-
-        const nameWords =
-          fullName
-            .split(/\s+/)
-            .filter(Boolean);
-
-        /*
-           هەموو وشەکانی گەڕان دەبێت
-           بە تەواوی لە ناوەکەدا هەبن.
-
-           نموونە:
-
-           محەمەد عەلی
-           ✅ محەمەد عەلی
-           ✅ محەمەد عەلی حەسەن
-           ❌ خەندە عەلی
-           ❌ محەمەد حەسەن
-        */
-
-        return words.every(word =>
-          nameWords.some(nameWord =>
-            nameWord === word
-          )
-        );
-
-      })
+      .filter(person =>
+        exactNamePhraseMatch(
+          person.name,
+          search
+        )
+      )
       .slice(0, 50);
 
   if (!results.length) {
@@ -932,6 +826,56 @@ async function searchByName(env, chatId, text) {
     buttons
   );
 
+}
+
+
+/* =====================================================
+   EXACT NAME PHRASE MATCH
+   ===================================================== */
+
+function exactNamePhraseMatch(name, search) {
+
+  const fullName =
+    normalizeName(name);
+
+  const query =
+    normalizeName(search);
+
+  if (!fullName || !query) {
+    return false;
+  }
+
+  /*
+     تەنها وشەی تەواو و بە ڕیزبەندی دروست.
+
+     محەمەد عەلی
+     ----------------
+     ✅ محەمەد عەلی
+     ✅ محەمەد عەلی حەسەن
+     ✅ حەسەن محەمەد عەلی
+     ❌ خەندە عەلی
+     ❌ محەمەد حەسەن
+     ❌ عەلی محەمەد
+     ❌ محەمەد عەلیدار
+  */
+
+  if (fullName === query) {
+    return true;
+  }
+
+  if (fullName.startsWith(query + " ")) {
+    return true;
+  }
+
+  if (fullName.endsWith(" " + query)) {
+    return true;
+  }
+
+  if (fullName.includes(" " + query + " ")) {
+    return true;
+  }
+
+  return false;
 }
 
 
@@ -1363,38 +1307,55 @@ function normalizeName(value) {
   return String(value || "")
     .toLowerCase()
     .normalize("NFKC")
+
+    /* Arabic/Kurdish diacritics */
     .replace(
       /[ًٌٍَُِّْـ]/g,
       ""
     )
+
+    /* Different forms of ی */
     .replace(
       /[يىئ]/g,
       "ی"
     )
+
+    /* Different ک */
     .replace(
       /ك/g,
       "ک"
     )
+
+    /* Different ە */
     .replace(
       /[ۀة]/g,
       "ە"
     )
+
+    /* Different ۆ */
     .replace(
       /ؤ/g,
       "ۆ"
     )
+
+    /* Arabic alif forms */
     .replace(
       /[أإآ]/g,
       "ا"
     )
+
+    /* Punctuation -> space */
     .replace(
-      /[،,؛;|/\\()[\]{}:_"'`]/g,
+      /[،,؛;|/\\()[\]{}:_"'`.-]/g,
       " "
     )
+
+    /* Multiple spaces */
     .replace(
       /\s+/g,
       " "
     )
+
     .trim();
 
 }

@@ -1025,12 +1025,6 @@ async function handleCallback(
     return;
   }
 
-  /*
-    یەکەم کرتە:
-    تەنها ناو + موالید
-    و دواتر preview.
-  */
-
   if (data.startsWith("preview:")) {
 
     const id =
@@ -1051,11 +1045,6 @@ async function handleCallback(
 
     return;
   }
-
-  /*
-    دووەم کرتە:
-    زانیاری تەواوی هەمان کەس.
-  */
 
   if (data.startsWith("person:")) {
 
@@ -1134,18 +1123,6 @@ async function searchByName(
 
   const buttons = [];
 
-  /*
-    لە ئەنجامەکانی گەڕان:
-    تەنها ناو + موالید.
-
-    هیچ:
-    - زانیاری کەسی هەڵبژێردراو
-    - تەلەفون
-    - more
-
-    لە دوگمەدا نادرێت.
-  */
-
   for (const person of results) {
 
     const birth =
@@ -1156,15 +1133,12 @@ async function searchByName(
       "بێ ناو";
 
     const shortName =
-      shortenButtonName(
-        name,
-        42
-      );
+      firstThreeNames(name);
 
     const label =
       birth
-        ? `👤 ${shortName} — 📅 ${birth}`
-        : `👤 ${shortName}`;
+        ? `${shortName} — ${birth}`
+        : `${shortName}`;
 
     buttons.push([
       {
@@ -1191,6 +1165,22 @@ async function searchByName(
     `🔎 ${results.length} ئەنجام دۆزرایەوە.`,
     buttons
   );
+
+}
+
+
+/* =====================================================
+   FIRST THREE NAMES
+   ===================================================== */
+
+function firstThreeNames(name) {
+
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" ");
 
 }
 
@@ -1335,15 +1325,12 @@ async function searchByPhone(
       "بێ ناو";
 
     const shortName =
-      shortenButtonName(
-        name,
-        42
-      );
+      firstThreeNames(name);
 
     const label =
       birth
-        ? `👤 ${shortName} — 📅 ${birth}`
-        : `👤 ${shortName}`;
+        ? `${shortName} — ${birth}`
+        : `${shortName}`;
 
     buttons.push([
       {
@@ -1404,44 +1391,20 @@ async function showPersonPreview(
   const birth =
     getBirth(person);
 
-  /*
-    ئەمە تەنها:
-    ناوی هەمان کەس
-    + موالید
+  const name =
+    firstThreeNames(
+      person.name || "-"
+    );
 
-    هیچ تەلەفون یان more لێرە نادرێت.
-  */
+  const text =
+    birth
+      ? `${name} — ${birth}`
+      : `${name}`;
 
-  let text =
-    `👤 ${person.name || "-"}`;
-
-  if (birth) {
-
-    text +=
-      `\n📅 موالید: ${birth}`;
-
-  } else {
-
-    text +=
-      `\n📅 موالید: لە داتا نییە`;
-
-  }
-
-  await sendMessageWithKeyboard(
+  await sendMessage(
     env.BOT_TOKEN,
     chatId,
-    text,
-    [
-      [
-        {
-          text:
-            "🔎 زانیاری زیاتر",
-
-          callback_data:
-            `person:${String(person.id)}`
-        }
-      ]
-    ]
+    text
   );
 
 }
@@ -1642,11 +1605,6 @@ function normalizeDigits(value) {
 
   return String(value || "")
 
-    /*
-      Arabic-Indic digits:
-      ٠١٢٣٤٥٦٧٨٩
-    */
-
     .replace(
       /[٠-٩]/g,
       digit =>
@@ -1654,11 +1612,6 @@ function normalizeDigits(value) {
           digit.charCodeAt(0) - 0x0660
         )
     )
-
-    /*
-      Persian digits:
-      ۰۱۲۳۴۵۶۷۸۹
-    */
 
     .replace(
       /[۰-۹]/g,
@@ -1677,11 +1630,6 @@ function normalizeDigits(value) {
 
 function getBirth(person) {
 
-  /*
-    تەنها لە more ـی هەمان person وەردەگیرێت.
-    هیچ گەڕانێک لە ناوەکانی خەڵکی تر ناکرێت.
-  */
-
   const original =
     String(
       person?.more || ""
@@ -1691,20 +1639,10 @@ function getBirth(person) {
     return "";
   }
 
-  /*
-    ژمارەکانی عەرەبی/فارسی دەگۆڕین
-    بۆ 0-9 بۆ ئەوەی regex بتوانێت بیانناسێت.
-  */
-
   const more =
     normalizeDigits(
       original
     );
-
-  /*
-    یەکەم:
-    ئەگەر label ـی موالید هەبێت.
-  */
 
   const labeled =
     more.match(
@@ -1714,14 +1652,6 @@ function getBirth(person) {
   if (labeled) {
     return labeled[1];
   }
-
-  /*
-    هەندێک داتا بە شێوەی:
-    1990 - ...
-    یان:
-    1990
-    تۆمار کراون.
-  */
 
   const year =
     more.match(
@@ -1757,20 +1687,10 @@ function cleanMore(
     return text;
   }
 
-  /*
-    ژمارەکان بۆ یەک شێوە دەهێنین
-    بۆ لابردنی موالید.
-  */
-
   text =
     normalizeDigits(
       text
     );
-
-  /*
-    تەنها label ـی موالید + ساڵەکەی
-    لە more ـی هەمان کەس لادەبەین.
-  */
 
   text =
     text.replace(
@@ -1780,11 +1700,6 @@ function cleanMore(
       ),
       ""
     );
-
-  /*
-    ئەگەر more تەنها ساڵ بوو،
-    خۆی لادەبەین.
-  */
 
   if (
     text.trim() === birth

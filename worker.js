@@ -5,7 +5,7 @@ const CORS_HEADERS = {
   "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V7";
+const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V8";
 
 function response(body, status = 200, headers = {}) {
   return new Response(body, {
@@ -76,27 +76,42 @@ export default {
       url.pathname === "/telegram/webhook" &&
       request.method === "POST"
     ) {
+
       try {
 
-        const update = await request.json();
+        const update =
+          await request.json();
 
-        await handleTelegram(update, env);
+        await handleTelegram(
+          update,
+          env
+        );
 
-        return new Response("OK", {
-          status: 200,
-          headers: CORS_HEADERS
-        });
+        return new Response(
+          "OK",
+          {
+            status: 200,
+            headers: CORS_HEADERS
+          }
+        );
 
       } catch (error) {
 
-        console.error("TELEGRAM ERROR:", error);
+        console.error(
+          "TELEGRAM ERROR:",
+          error
+        );
 
-        return new Response("ERROR", {
-          status: 500,
-          headers: CORS_HEADERS
-        });
+        return new Response(
+          "ERROR",
+          {
+            status: 500,
+            headers: CORS_HEADERS
+          }
+        );
 
       }
+
     }
 
     if (url.pathname === "/") {
@@ -111,10 +126,13 @@ export default {
 
     }
 
-    return json({
-      ok: false,
-      error: "Not Found"
-    }, 404);
+    return json(
+      {
+        ok: false,
+        error: "Not Found"
+      },
+      404
+    );
 
   }
 
@@ -125,11 +143,15 @@ export default {
    WEBSITE NAME SEARCH API
    ===================================================== */
 
-async function searchNameAPI(request, env) {
+async function searchNameAPI(
+  request,
+  env
+) {
 
   try {
 
-    const url = new URL(request.url);
+    const url =
+      new URL(request.url);
 
     const query =
       url.searchParams.get("q") || "";
@@ -167,8 +189,9 @@ async function searchNameAPI(request, env) {
       );
 
     const results =
-      deduplicatePeopleByName(matched)
-        .slice(0, 50);
+      deduplicatePeopleByName(
+        matched
+      ).slice(0, 50);
 
     return json({
       ok: true,
@@ -178,7 +201,10 @@ async function searchNameAPI(request, env) {
 
   } catch (error) {
 
-    console.error("NAME API ERROR:", error);
+    console.error(
+      "NAME API ERROR:",
+      error
+    );
 
     return json({
       ok: false,
@@ -194,11 +220,15 @@ async function searchNameAPI(request, env) {
    WEBSITE PHONE SEARCH API
    ===================================================== */
 
-async function searchPhoneAPI(request, env) {
+async function searchPhoneAPI(
+  request,
+  env
+) {
 
   try {
 
-    const url = new URL(request.url);
+    const url =
+      new URL(request.url);
 
     const query =
       url.searchParams.get("q") || "";
@@ -229,13 +259,15 @@ async function searchPhoneAPI(request, env) {
 
     const matched =
       people.filter(person =>
-        normalizePhone(person.phone)
-          .includes(phone)
+        normalizePhone(
+          person.phone
+        ).includes(phone)
       );
 
     const results =
-      deduplicatePeopleByName(matched)
-        .slice(0, 50);
+      deduplicatePeopleByName(
+        matched
+      ).slice(0, 50);
 
     return json({
       ok: true,
@@ -245,7 +277,10 @@ async function searchPhoneAPI(request, env) {
 
   } catch (error) {
 
-    console.error("PHONE API ERROR:", error);
+    console.error(
+      "PHONE API ERROR:",
+      error
+    );
 
     return json({
       ok: false,
@@ -261,12 +296,17 @@ async function searchPhoneAPI(request, env) {
    IMPORT PEOPLE
    ===================================================== */
 
-async function importPeople(request, env) {
+async function importPeople(
+  request,
+  env
+) {
 
   try {
 
     const key =
-      request.headers.get("X-Import-Key");
+      request.headers.get(
+        "X-Import-Key"
+      );
 
     if (
       !env.IMPORT_KEY ||
@@ -290,15 +330,11 @@ async function importPeople(request, env) {
 
       return json({
         ok: false,
-        error: "people must be an array"
+        error:
+          "people must be an array"
       }, 400);
 
     }
-
-    /*
-      یەکەم داتا لە هەمان Import ـدا پاک دەکەینەوە.
-      هەر ناوێک تەنها یەکجار.
-    */
 
     const uniquePeople =
       deduplicatePeopleByName(
@@ -310,13 +346,19 @@ async function importPeople(request, env) {
             ),
 
           name:
-            String(person.name || ""),
+            String(
+              person.name || ""
+            ),
 
           phone:
-            String(person.phone || ""),
+            String(
+              person.phone || ""
+            ),
 
           more:
-            String(person.more || "")
+            String(
+              person.more || ""
+            )
         }))
       );
 
@@ -327,7 +369,10 @@ async function importPeople(request, env) {
     ) {
 
       const chunk =
-        uniquePeople.slice(i, i + 50);
+        uniquePeople.slice(
+          i,
+          i + 50
+        );
 
       const statements =
         chunk.map(person => {
@@ -347,27 +392,31 @@ async function importPeople(request, env) {
 
         });
 
-      await env.DB.batch(statements);
+      await env.DB.batch(
+        statements
+      );
 
     }
 
-    /*
-      دووبارەکانی پێشوو لە D1 ـیش پاک دەکەینەوە.
-    */
-
     const cleanup =
-      await deduplicateDatabase(env);
+      await deduplicateDatabase(
+        env
+      );
 
     return json({
       ok: true,
-      imported: uniquePeople.length,
+      imported:
+        uniquePeople.length,
       duplicatesRemoved:
         cleanup.deleted
     });
 
   } catch (error) {
 
-    console.error("IMPORT ERROR:", error);
+    console.error(
+      "IMPORT ERROR:",
+      error
+    );
 
     return json({
       ok: false,
@@ -383,12 +432,17 @@ async function importPeople(request, env) {
    MANUAL DEDUPLICATE API
    ===================================================== */
 
-async function deduplicateAPI(request, env) {
+async function deduplicateAPI(
+  request,
+  env
+) {
 
   try {
 
     const key =
-      request.headers.get("X-Import-Key");
+      request.headers.get(
+        "X-Import-Key"
+      );
 
     if (
       !env.IMPORT_KEY ||
@@ -403,7 +457,9 @@ async function deduplicateAPI(request, env) {
     }
 
     const result =
-      await deduplicateDatabase(env);
+      await deduplicateDatabase(
+        env
+      );
 
     return json({
       ok: true,
@@ -436,7 +492,9 @@ async function deduplicateAPI(request, env) {
    DEDUPLICATE DATABASE
    ===================================================== */
 
-async function deduplicateDatabase(env) {
+async function deduplicateDatabase(
+  env
+) {
 
   const result =
     await env.DB.prepare(`
@@ -459,12 +517,9 @@ async function deduplicateDatabase(env) {
   for (const person of people) {
 
     const name =
-      normalizeName(person.name);
-
-    /*
-      ئەگەر ناوی بەتاڵە، وەک duplicate
-      لەسەر بنەمای ناو ناسرێتەوە.
-    */
+      normalizeName(
+        person.name
+      );
 
     if (!name) {
       continue;
@@ -484,11 +539,6 @@ async function deduplicateDatabase(env) {
 
   }
 
-  /*
-    D1 سنووری bound parameters ـی هەیە،
-    بۆیە بە batch ـی بچووک دەیسڕینەوە.
-  */
-
   let deleted = 0;
 
   for (
@@ -498,7 +548,10 @@ async function deduplicateDatabase(env) {
   ) {
 
     const chunk =
-      duplicateIds.slice(i, i + 40);
+      duplicateIds.slice(
+        i,
+        i + 40
+      );
 
     const statements =
       chunk.map(id =>
@@ -533,7 +586,9 @@ async function deduplicateDatabase(env) {
   return {
     deleted,
     remaining:
-      Number(countResult?.count || 0)
+      Number(
+        countResult?.count || 0
+      )
   };
 
 }
@@ -543,7 +598,10 @@ async function deduplicateDatabase(env) {
    TELEGRAM EXPORT
    ===================================================== */
 
-async function telegramExport(request, env) {
+async function telegramExport(
+  request,
+  env
+) {
 
   try {
 
@@ -593,11 +651,6 @@ async function telegramExport(request, env) {
 
     }
 
-    /*
-      هەرچی لە سایتەکە بێت،
-      پێش Export دووبارەکان لادەبەین.
-    */
-
     const uniquePeople =
       deduplicatePeopleByName(
         people
@@ -626,13 +679,19 @@ async function telegramExport(request, env) {
         `#${i + 1}\n`;
 
       text +=
-        `ناو: ${person.name || "-"}\n`;
+        `ناو: ${
+          person.name || "-"
+        }\n`;
 
       text +=
-        `ژمارەی تەلەفون: ${person.phone || "-"}\n`;
+        `ژمارەی تەلەفون: ${
+          person.phone || "-"
+        }\n`;
 
       text +=
-        `زانیاری زیاتر: ${person.more || "-"}\n`;
+        `زانیاری زیاتر: ${
+          person.more || "-"
+        }\n`;
 
       if (
         person.id !== undefined &&
@@ -758,7 +817,10 @@ async function telegramExport(request, env) {
    TELEGRAM
    ===================================================== */
 
-async function handleTelegram(update, env) {
+async function handleTelegram(
+  update,
+  env
+) {
 
   if (update.callback_query) {
 
@@ -814,16 +876,13 @@ async function handleTelegram(update, env) {
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
-      `📊 کۆی داتا: ${result?.count || 0}`
+      `📊 کۆی داتا: ${
+        result?.count || 0
+      }`
     );
 
     return;
   }
-
-  /*
-    تەنها ADMIN_ID دەتوانێت
-    دووبارەکانی D1 پاک بکاتەوە.
-  */
 
   if (text === "/cleanup") {
 
@@ -842,7 +901,9 @@ async function handleTelegram(update, env) {
     }
 
     const result =
-      await deduplicateDatabase(env);
+      await deduplicateDatabase(
+        env
+      );
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -904,7 +965,10 @@ async function handleTelegram(update, env) {
    TELEGRAM CALLBACK
    ===================================================== */
 
-async function handleCallback(query, env) {
+async function handleCallback(
+  query,
+  env
+) {
 
   const chatId =
     query.message?.chat?.id;
@@ -915,16 +979,6 @@ async function handleCallback(query, env) {
 
   const data =
     query.data || "";
-
-  if (data === "noop") {
-
-    await answerCallback(
-      env.BOT_TOKEN,
-      query.id
-    );
-
-    return;
-  }
 
   if (data === "search_name") {
 
@@ -991,10 +1045,44 @@ async function handleCallback(query, env) {
     return;
   }
 
+  /*
+    یەکەم کرتە:
+    ناو + موالید پیشان دەدات
+    و لە ژێریدا دوگمەی زانیاری زیاتر دەردەخات.
+  */
+
+  if (data.startsWith("preview:")) {
+
+    const id =
+      data.slice(
+        "preview:".length
+      );
+
+    await answerCallback(
+      env.BOT_TOKEN,
+      query.id
+    );
+
+    await showPersonPreview(
+      env,
+      chatId,
+      id
+    );
+
+    return;
+  }
+
+  /*
+    دووەم کرتە:
+    زانیاری تەواوی هەمان کەس پیشان دەدات.
+  */
+
   if (data.startsWith("person:")) {
 
     const id =
-      data.slice(7);
+      data.slice(
+        "person:".length
+      );
 
     await answerCallback(
       env.BOT_TOKEN,
@@ -1064,13 +1152,12 @@ async function searchByName(
     return;
   }
 
-  /*
-    بۆ هەر کەس:
-    یەکەمجار ناو + موالید
-    دوای ئەوە دوگمەی زانیاری زیاتر
-  */
-
   const buttons = [];
+
+  /*
+    لە سەرەتا تەنها ناو + موالید.
+    هیچ دوگمەی زانیاری زیاتر لێرە نییە.
+  */
 
   for (const person of results) {
 
@@ -1086,30 +1173,13 @@ async function searchByName(
         ? `👤 ${name} — 📅 ${birth}`
         : `👤 ${name}`;
 
-    /*
-      دوگمەی ناو:
-      تەنها پیشاندانە و زانیاری زیاتر نادات.
-    */
-
     buttons.push([
       {
         text:
           label.slice(0, 60),
-        callback_data:
-          "noop"
-      }
-    ]);
 
-    /*
-      دوگمەی زانیاری زیاتر
-    */
-
-    buttons.push([
-      {
-        text:
-          "🔎 زانیاری زیاتر",
         callback_data:
-          `person:${String(person.id)}`
+          `preview:${String(person.id)}`
       }
     ]);
 
@@ -1119,6 +1189,7 @@ async function searchByName(
     {
       text:
         "⬅️ گەڕانەوە",
+
       callback_data:
         "main_menu"
     }
@@ -1127,7 +1198,7 @@ async function searchByName(
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
     chatId,
-    `🔎 ${results.length} ئەنجام دۆزرایەوە.\n\nلە سەرەتا تەنها ناو و موالیدی پیشان دراوە؛ بۆ زانیاری تەواو «🔎 زانیاری زیاتر» دابگرە:`,
+    `🔎 ${results.length} ئەنجام دۆزرایەوە.`,
     buttons
   );
 
@@ -1152,21 +1223,6 @@ function exactNamePhraseMatch(
   if (!fullName || !query) {
     return false;
   }
-
-  /*
-    تەنها sequence ـی وشە تەواو دەگرێت.
-
-    محەمەد عەلی
-    ----------------
-    ✅ محەمەد عەلی
-    ✅ محەمەد عەلی حەسەن
-    ✅ حەسەن محەمەد عەلی
-
-    ❌ خەندە عەلی
-    ❌ محەمەد حەسەن
-    ❌ عەلی محەمەد
-    ❌ محەمەد عەلیدار
-  */
 
   if (fullName === query) {
     return true;
@@ -1229,8 +1285,9 @@ async function searchByPhone(
 
   const matched =
     people.filter(person =>
-      normalizePhone(person.phone)
-        .includes(phone)
+      normalizePhone(
+        person.phone
+      ).includes(phone)
     );
 
   const results =
@@ -1265,21 +1322,18 @@ async function searchByPhone(
         ? `👤 ${name} — 📅 ${birth}`
         : `👤 ${name}`;
 
-    buttons.push([
-      {
-        text:
-          label.slice(0, 60),
-        callback_data:
-          "noop"
-      }
-    ]);
+    /*
+      تەنها ناو + موالید.
+      کرتەکردن دەباتە preview.
+    */
 
     buttons.push([
       {
         text:
-          "🔎 زانیاری زیاتر",
+          label.slice(0, 60),
+
         callback_data:
-          `person:${String(person.id)}`
+          `preview:${String(person.id)}`
       }
     ]);
 
@@ -1289,6 +1343,7 @@ async function searchByPhone(
     {
       text:
         "⬅️ گەڕانەوە",
+
       callback_data:
         "main_menu"
     }
@@ -1297,7 +1352,7 @@ async function searchByPhone(
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
     chatId,
-    `📱 ${results.length} ئەنجام دۆزرایەوە.\n\nبۆ زانیاری تەواو «🔎 زانیاری زیاتر» دابگرە:`,
+    `📱 ${results.length} ئەنجام دۆزرایەوە.`,
     buttons
   );
 
@@ -1305,7 +1360,72 @@ async function searchByPhone(
 
 
 /* =====================================================
-   SHOW PERSON
+   SHOW PERSON PREVIEW
+   ===================================================== */
+
+async function showPersonPreview(
+  env,
+  chatId,
+  id
+) {
+
+  const person =
+    await getPerson(
+      env,
+      id
+    );
+
+  if (!person) {
+
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      "❌ داتا نەدۆزرایەوە."
+    );
+
+    return;
+  }
+
+  const birth =
+    getBirth(person);
+
+  let text =
+    `👤 ${person.name || "-"}`;
+
+  if (birth) {
+
+    text +=
+      `\n📅 موالید: ${birth}`;
+
+  }
+
+  /*
+    تەنها لە ژێر ناو و موالید
+    دوگمەی زانیاری زیاتر دەردەکەوێت.
+  */
+
+  await sendMessageWithKeyboard(
+    env.BOT_TOKEN,
+    chatId,
+    text,
+    [
+      [
+        {
+          text:
+            "🔎 زانیاری زیاتر",
+
+          callback_data:
+            `person:${String(person.id)}`
+        }
+      ]
+    ]
+  );
+
+}
+
+
+/* =====================================================
+   SHOW PERSON FULL INFO
    ===================================================== */
 
 async function showPerson(
@@ -1335,7 +1455,9 @@ async function showPerson(
     getBirth(person);
 
   let text =
-    `👤 ناو: ${person.name || "-"}`;
+    `👤 ناو: ${
+      person.name || "-"
+    }`;
 
   text +=
     `\n📅 موالید: ${
@@ -1370,6 +1492,7 @@ async function showPerson(
         {
           text:
             "⬅️ گەڕانەوە بۆ سەرەتا",
+
           callback_data:
             "main_menu"
         }
@@ -1384,7 +1507,9 @@ async function showPerson(
    GET PEOPLE
    ===================================================== */
 
-async function getPeople(env) {
+async function getPeople(
+  env
+) {
 
   const result =
     await env.DB.prepare(`
@@ -1393,11 +1518,6 @@ async function getPeople(env) {
       ORDER BY rowid ASC
       LIMIT 10000
     `).all();
-
-  /*
-    تەنانەت ئەگەر D1 هێشتا duplicate ـی
-    هەبێت، لێرەش دووبارەکان نیشان نادرێن.
-  */
 
   return deduplicatePeopleByName(
     result.results || []
@@ -1471,11 +1591,6 @@ function deduplicatePeopleByName(
         person?.name
       );
 
-    /*
-      ناوی بەتاڵ duplicate ـی
-      هەژمار ناکرێت.
-    */
-
     if (!normalized) {
 
       result.push(person);
@@ -1494,6 +1609,7 @@ function deduplicatePeopleByName(
   }
 
   return result;
+
 }
 
 
@@ -1501,16 +1617,14 @@ function deduplicatePeopleByName(
    BIRTH
    ===================================================== */
 
-function getBirth(person) {
+function getBirth(
+  person
+) {
 
   const more =
     String(
       person?.more || ""
     );
-
-  /*
-    یەکەم: وشەکانی تایبەت بە موالید
-  */
 
   const labeled =
     more.match(
@@ -1520,12 +1634,6 @@ function getBirth(person) {
   if (labeled) {
     return labeled[1];
   }
-
-  /*
-    دووەم:
-    ئەگەر لە داتاکە ساڵێکی 18xx/19xx/20xx هەبوو،
-    هەمان کەسەکەی خۆی دەگرێت.
-  */
 
   const year =
     more.match(
@@ -1560,11 +1668,6 @@ function cleanMore(
   if (!birth) {
     return text;
   }
-
-  /*
-    تەنها label ـی موالید و ساڵەکەی
-    لە more ـی هەمان کەس لادەبەین.
-  */
 
   text =
     text.replace(
@@ -1603,6 +1706,7 @@ async function sendMainMenu(
         {
           text:
             "👤 گەڕان بە ناو",
+
           callback_data:
             "search_name"
         }
@@ -1611,6 +1715,7 @@ async function sendMainMenu(
         {
           text:
             "📱 ژمارەی تەلەفون",
+
           callback_data:
             "search_phone"
         }
@@ -1635,13 +1740,16 @@ async function sendMessage(
     `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
+
       headers: {
         "content-type":
           "application/json"
       },
+
       body: JSON.stringify({
         chat_id:
           chatId,
+
         text:
           String(text).slice(
             0,
@@ -1669,18 +1777,22 @@ async function sendMessageWithKeyboard(
     `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
+
       headers: {
         "content-type":
           "application/json"
       },
+
       body: JSON.stringify({
         chat_id:
           chatId,
+
         text:
           String(text).slice(
             0,
             4000
           ),
+
         reply_markup: {
           inline_keyboard:
             keyboard
@@ -1706,14 +1818,18 @@ async function answerCallback(
     `https://api.telegram.org/bot${token}/answerCallbackQuery`,
     {
       method: "POST",
+
       headers: {
         "content-type":
           "application/json"
       },
+
       body: JSON.stringify({
         callback_query_id:
           callbackId,
+
         text,
+
         show_alert:
           false
       })
@@ -1787,71 +1903,49 @@ async function getMode(
    NORMALIZE NAME
    ===================================================== */
 
-function normalizeName(value) {
+function normalizeName(
+  value
+) {
 
   return String(value || "")
     .toLowerCase()
     .normalize("NFKC")
 
-    /*
-      Arabic/Kurdish diacritics
-    */
     .replace(
       /[ًٌٍَُِّْـ]/g,
       ""
     )
 
-    /*
-      Different forms of ی
-    */
     .replace(
       /[يىئ]/g,
       "ی"
     )
 
-    /*
-      Different ک
-    */
     .replace(
       /ك/g,
       "ک"
     )
 
-    /*
-      Different ە
-    */
     .replace(
       /[ۀة]/g,
       "ە"
     )
 
-    /*
-      Different ۆ
-    */
     .replace(
       /ؤ/g,
       "ۆ"
     )
 
-    /*
-      Arabic alif forms
-    */
     .replace(
       /[أإآ]/g,
       "ا"
     )
 
-    /*
-      Punctuation -> space
-    */
     .replace(
       /[،,؛;|/\\()[\]{}:_"'`.-]/g,
       " "
     )
 
-    /*
-      Multiple spaces
-    */
     .replace(
       /\s+/g,
       " "
@@ -1866,7 +1960,9 @@ function normalizeName(value) {
    NORMALIZE PHONE
    ===================================================== */
 
-function normalizePhone(value) {
+function normalizePhone(
+  value
+) {
 
   return String(value || "")
     .replace(

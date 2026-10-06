@@ -5,7 +5,7 @@ const CORS_HEADERS = {
   "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V8";
+const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V9";
 
 function response(body, status = 200, headers = {}) {
   return new Response(body, {
@@ -143,10 +143,7 @@ export default {
    WEBSITE NAME SEARCH API
    ===================================================== */
 
-async function searchNameAPI(
-  request,
-  env
-) {
+async function searchNameAPI(request, env) {
 
   try {
 
@@ -220,10 +217,7 @@ async function searchNameAPI(
    WEBSITE PHONE SEARCH API
    ===================================================== */
 
-async function searchPhoneAPI(
-  request,
-  env
-) {
+async function searchPhoneAPI(request, env) {
 
   try {
 
@@ -296,10 +290,7 @@ async function searchPhoneAPI(
    IMPORT PEOPLE
    ===================================================== */
 
-async function importPeople(
-  request,
-  env
-) {
+async function importPeople(request, env) {
 
   try {
 
@@ -432,10 +423,7 @@ async function importPeople(
    MANUAL DEDUPLICATE API
    ===================================================== */
 
-async function deduplicateAPI(
-  request,
-  env
-) {
+async function deduplicateAPI(request, env) {
 
   try {
 
@@ -492,9 +480,7 @@ async function deduplicateAPI(
    DEDUPLICATE DATABASE
    ===================================================== */
 
-async function deduplicateDatabase(
-  env
-) {
+async function deduplicateDatabase(env) {
 
   const result =
     await env.DB.prepare(`
@@ -598,10 +584,7 @@ async function deduplicateDatabase(
    TELEGRAM EXPORT
    ===================================================== */
 
-async function telegramExport(
-  request,
-  env
-) {
+async function telegramExport(request, env) {
 
   try {
 
@@ -817,10 +800,7 @@ async function telegramExport(
    TELEGRAM
    ===================================================== */
 
-async function handleTelegram(
-  update,
-  env
-) {
+async function handleTelegram(update, env) {
 
   if (update.callback_query) {
 
@@ -1047,8 +1027,8 @@ async function handleCallback(
 
   /*
     یەکەم کرتە:
-    ناو + موالید پیشان دەدات
-    و لە ژێریدا دوگمەی زانیاری زیاتر دەردەخات.
+    تەنها ناو + موالید
+    و دواتر preview.
   */
 
   if (data.startsWith("preview:")) {
@@ -1074,7 +1054,7 @@ async function handleCallback(
 
   /*
     دووەم کرتە:
-    زانیاری تەواوی هەمان کەس پیشان دەدات.
+    زانیاری تەواوی هەمان کەس.
   */
 
   if (data.startsWith("person:")) {
@@ -1155,8 +1135,15 @@ async function searchByName(
   const buttons = [];
 
   /*
-    لە سەرەتا تەنها ناو + موالید.
-    هیچ دوگمەی زانیاری زیاتر لێرە نییە.
+    لە ئەنجامەکانی گەڕان:
+    تەنها ناو + موالید.
+
+    هیچ:
+    - زانیاری کەسی هەڵبژێردراو
+    - تەلەفون
+    - more
+
+    لە دوگمەدا نادرێت.
   */
 
   for (const person of results) {
@@ -1168,16 +1155,20 @@ async function searchByName(
       person.name ||
       "بێ ناو";
 
+    const shortName =
+      shortenButtonName(
+        name,
+        42
+      );
+
     const label =
       birth
-        ? `👤 ${name} — 📅 ${birth}`
-        : `👤 ${name}`;
+        ? `👤 ${shortName} — 📅 ${birth}`
+        : `👤 ${shortName}`;
 
     buttons.push([
       {
-        text:
-          label.slice(0, 60),
-
+        text: label,
         callback_data:
           `preview:${String(person.id)}`
       }
@@ -1189,7 +1180,6 @@ async function searchByName(
     {
       text:
         "⬅️ گەڕانەوە",
-
       callback_data:
         "main_menu"
     }
@@ -1200,6 +1190,33 @@ async function searchByName(
     chatId,
     `🔎 ${results.length} ئەنجام دۆزرایەوە.`,
     buttons
+  );
+
+}
+
+
+/* =====================================================
+   SHORTEN LONG BUTTON NAME
+   ===================================================== */
+
+function shortenButtonName(
+  name,
+  maxLength = 42
+) {
+
+  const value =
+    String(name || "").trim();
+
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return (
+    value.slice(
+      0,
+      maxLength - 1
+    ).trim() +
+    "…"
   );
 
 }
@@ -1317,21 +1334,20 @@ async function searchByPhone(
       person.name ||
       "بێ ناو";
 
+    const shortName =
+      shortenButtonName(
+        name,
+        42
+      );
+
     const label =
       birth
-        ? `👤 ${name} — 📅 ${birth}`
-        : `👤 ${name}`;
-
-    /*
-      تەنها ناو + موالید.
-      کرتەکردن دەباتە preview.
-    */
+        ? `👤 ${shortName} — 📅 ${birth}`
+        : `👤 ${shortName}`;
 
     buttons.push([
       {
-        text:
-          label.slice(0, 60),
-
+        text: label,
         callback_data:
           `preview:${String(person.id)}`
       }
@@ -1343,7 +1359,6 @@ async function searchByPhone(
     {
       text:
         "⬅️ گەڕانەوە",
-
       callback_data:
         "main_menu"
     }
@@ -1389,6 +1404,14 @@ async function showPersonPreview(
   const birth =
     getBirth(person);
 
+  /*
+    ئەمە تەنها:
+    ناوی هەمان کەس
+    + موالید
+
+    هیچ تەلەفون یان more لێرە نادرێت.
+  */
+
   let text =
     `👤 ${person.name || "-"}`;
 
@@ -1397,12 +1420,12 @@ async function showPersonPreview(
     text +=
       `\n📅 موالید: ${birth}`;
 
-  }
+  } else {
 
-  /*
-    تەنها لە ژێر ناو و موالید
-    دوگمەی زانیاری زیاتر دەردەکەوێت.
-  */
+    text +=
+      `\n📅 موالید: لە داتا نییە`;
+
+  }
 
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
@@ -1507,9 +1530,7 @@ async function showPerson(
    GET PEOPLE
    ===================================================== */
 
-async function getPeople(
-  env
-) {
+async function getPeople(env) {
 
   const result =
     await env.DB.prepare(`
@@ -1614,30 +1635,97 @@ function deduplicatePeopleByName(
 
 
 /* =====================================================
+   DIGIT NORMALIZATION
+   ===================================================== */
+
+function normalizeDigits(value) {
+
+  return String(value || "")
+
+    /*
+      Arabic-Indic digits:
+      ٠١٢٣٤٥٦٧٨٩
+    */
+
+    .replace(
+      /[٠-٩]/g,
+      digit =>
+        String(
+          digit.charCodeAt(0) - 0x0660
+        )
+    )
+
+    /*
+      Persian digits:
+      ۰۱۲۳۴۵۶۷۸۹
+    */
+
+    .replace(
+      /[۰-۹]/g,
+      digit =>
+        String(
+          digit.charCodeAt(0) - 0x06F0
+        )
+    );
+
+}
+
+
+/* =====================================================
    BIRTH
    ===================================================== */
 
-function getBirth(
-  person
-) {
+function getBirth(person) {
 
-  const more =
+  /*
+    تەنها لە more ـی هەمان person وەردەگیرێت.
+    هیچ گەڕانێک لە ناوەکانی خەڵکی تر ناکرێت.
+  */
+
+  const original =
     String(
       person?.more || ""
     );
 
+  if (!original.trim()) {
+    return "";
+  }
+
+  /*
+    ژمارەکانی عەرەبی/فارسی دەگۆڕین
+    بۆ 0-9 بۆ ئەوەی regex بتوانێت بیانناسێت.
+  */
+
+  const more =
+    normalizeDigits(
+      original
+    );
+
+  /*
+    یەکەم:
+    ئەگەر label ـی موالید هەبێت.
+  */
+
   const labeled =
     more.match(
-      /(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\s*لەدایکبوون|birth|year\s*of\s*birth)[^\d]{0,30}((?:18|19|20)\d{2})/i
+      /(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\s*لەدایکبوون|ساڵی\s*لە\s*دایک\s*بوون|birth|year\s*of\s*birth)[^\d]{0,50}((?:18|19|20)\d{2})/i
     );
 
   if (labeled) {
     return labeled[1];
   }
 
+  /*
+    هەندێک داتا بە شێوەی:
+    1990 - ...
+    یان:
+    1990
+    تۆمار کراون.
+  */
+
   const year =
     more.match(
-      /\b((?:18|19|20)\d{2})\b/
+      /(?:^|[^\d])((?:18|19|20)\d{2})(?:$|[^\d])/m
     );
 
   return year
@@ -1669,14 +1757,40 @@ function cleanMore(
     return text;
   }
 
+  /*
+    ژمارەکان بۆ یەک شێوە دەهێنین
+    بۆ لابردنی موالید.
+  */
+
+  text =
+    normalizeDigits(
+      text
+    );
+
+  /*
+    تەنها label ـی موالید + ساڵەکەی
+    لە more ـی هەمان کەس لادەبەین.
+  */
+
   text =
     text.replace(
       new RegExp(
-        `(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\\s*لەدایکبوون|birth|year\\s*of\\s*birth)[^\\d]{0,30}${birth}`,
+        `(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\\s*لەدایکبوون|ساڵی\\s*لە\\s*دایک\\s*بوون|birth|year\\s*of\\s*birth)[^\\d]{0,50}${birth}`,
         "i"
       ),
       ""
     );
+
+  /*
+    ئەگەر more تەنها ساڵ بوو،
+    خۆی لادەبەین.
+  */
+
+  if (
+    text.trim() === birth
+  ) {
+    return "";
+  }
 
   return text
     .replace(
@@ -1964,7 +2078,9 @@ function normalizePhone(
   value
 ) {
 
-  return String(value || "")
+  return normalizeDigits(
+    value
+  )
     .replace(
       /[^\d+]/g,
       ""

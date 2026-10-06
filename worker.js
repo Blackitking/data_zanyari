@@ -28,6 +28,7 @@ function json(data, status = 200) {
 }
 
 export default {
+
   async fetch(request, env) {
 
     const url = new URL(request.url);
@@ -75,8 +76,11 @@ export default {
       url.pathname === "/telegram/webhook" &&
       request.method === "POST"
     ) {
+
       try {
-        const update = await request.json();
+
+        const update =
+          await request.json();
 
         await handleTelegram(
           update,
@@ -105,10 +109,13 @@ export default {
             headers: CORS_HEADERS
           }
         );
+
       }
+
     }
 
     if (url.pathname === "/") {
+
       return new Response(
         `Data Zanyari Worker is running.\nVersion: ${WORKER_VERSION}`,
         {
@@ -116,6 +123,7 @@ export default {
           headers: CORS_HEADERS
         }
       );
+
     }
 
     return json(
@@ -125,19 +133,22 @@ export default {
       },
       404
     );
+
   }
+
 };
 
 
 /* =====================================================
-   WEBSITE NAME SEARCH
+   WEBSITE NAME SEARCH API
    ===================================================== */
 
 async function searchNameAPI(request, env) {
 
   try {
 
-    const url = new URL(request.url);
+    const url =
+      new URL(request.url);
 
     const query =
       url.searchParams.get("q") || "";
@@ -146,11 +157,13 @@ async function searchNameAPI(request, env) {
       normalizeName(query);
 
     if (!search) {
+
       return json({
         ok: true,
         people: [],
         count: 0
       });
+
     }
 
     const result =
@@ -194,12 +207,14 @@ async function searchNameAPI(request, env) {
       ok: false,
       error: String(error)
     }, 500);
+
   }
+
 }
 
 
 /* =====================================================
-   WEBSITE PHONE SEARCH
+   WEBSITE PHONE SEARCH API
    ===================================================== */
 
 async function searchPhoneAPI(request, env) {
@@ -216,11 +231,13 @@ async function searchPhoneAPI(request, env) {
       normalizePhone(query);
 
     if (!phone) {
+
       return json({
         ok: true,
         people: [],
         count: 0
       });
+
     }
 
     const result =
@@ -263,12 +280,14 @@ async function searchPhoneAPI(request, env) {
       ok: false,
       error: String(error)
     }, 500);
+
   }
+
 }
 
 
 /* =====================================================
-   IMPORT
+   IMPORT PEOPLE
    ===================================================== */
 
 async function importPeople(request, env) {
@@ -284,10 +303,12 @@ async function importPeople(request, env) {
       !env.IMPORT_KEY ||
       key !== env.IMPORT_KEY
     ) {
+
       return response(
         "Unauthorized",
         401
       );
+
     }
 
     const body =
@@ -297,11 +318,13 @@ async function importPeople(request, env) {
       body.people;
 
     if (!Array.isArray(people)) {
+
       return json({
         ok: false,
         error:
           "people must be an array"
       }, 400);
+
     }
 
     const uniquePeople =
@@ -363,6 +386,7 @@ async function importPeople(request, env) {
       await env.DB.batch(
         statements
       );
+
     }
 
     const cleanup =
@@ -389,12 +413,14 @@ async function importPeople(request, env) {
       ok: false,
       error: String(error)
     }, 500);
+
   }
+
 }
 
 
 /* =====================================================
-   DEDUPLICATE API
+   MANUAL DEDUPLICATE API
    ===================================================== */
 
 async function deduplicateAPI(request, env) {
@@ -410,10 +436,12 @@ async function deduplicateAPI(request, env) {
       !env.IMPORT_KEY ||
       key !== env.IMPORT_KEY
     ) {
+
       return response(
         "Unauthorized",
         401
       );
+
     }
 
     const result =
@@ -442,7 +470,9 @@ async function deduplicateAPI(request, env) {
       ok: false,
       error: String(error)
     }, 500);
+
   }
+
 }
 
 
@@ -467,7 +497,8 @@ async function deduplicateDatabase(env) {
   const seen =
     new Set();
 
-  const duplicateIds = [];
+  const duplicateIds =
+    [];
 
   for (const person of people) {
 
@@ -489,7 +520,9 @@ async function deduplicateDatabase(env) {
     } else {
 
       seen.add(name);
+
     }
+
   }
 
   let deleted = 0;
@@ -524,7 +557,9 @@ async function deduplicateDatabase(env) {
 
       deleted +=
         statements.length;
+
     }
+
   }
 
   const countResult =
@@ -541,6 +576,7 @@ async function deduplicateDatabase(env) {
         countResult?.count || 0
       )
   };
+
 }
 
 
@@ -553,19 +589,23 @@ async function telegramExport(request, env) {
   try {
 
     if (!env.BOT_TOKEN) {
+
       return json({
         ok: false,
         error:
           "BOT_TOKEN is not configured"
       }, 500);
+
     }
 
     if (!env.ADMIN_ID) {
+
       return json({
         ok: false,
         error:
           "ADMIN_ID is not configured"
       }, 500);
+
     }
 
     const body =
@@ -575,19 +615,23 @@ async function telegramExport(request, env) {
       body.people;
 
     if (!Array.isArray(people)) {
+
       return json({
         ok: false,
         error:
           "people must be an array"
       }, 400);
+
     }
 
     if (!people.length) {
+
       return json({
         ok: false,
         error:
           "No data to export"
       }, 400);
+
     }
 
     const uniquePeople =
@@ -639,9 +683,11 @@ async function telegramExport(request, env) {
 
         text +=
           `ID: ${person.id}\n`;
+
       }
 
       text += "\n";
+
     }
 
     text +=
@@ -701,6 +747,7 @@ async function telegramExport(request, env) {
         description:
           "Invalid Telegram response"
       };
+
     }
 
     if (
@@ -719,6 +766,7 @@ async function telegramExport(request, env) {
           telegramResult.description ||
           "Telegram API error"
       }, 500);
+
     }
 
     return json({
@@ -742,18 +790,17 @@ async function telegramExport(request, env) {
       ok: false,
       error: String(error)
     }, 500);
+
   }
+
 }
 
 
 /* =====================================================
-   TELEGRAM MAIN
+   TELEGRAM
    ===================================================== */
 
-async function handleTelegram(
-  update,
-  env
-) {
+async function handleTelegram(update, env) {
 
   if (update.callback_query) {
 
@@ -781,13 +828,7 @@ async function handleTelegram(
   const text =
     message.text.trim();
 
-
-  /* /start */
-
-  if (
-    text === "/start" ||
-    text.startsWith("/start@")
-  ) {
+  if (text === "/start") {
 
     await setMode(
       env,
@@ -802,9 +843,6 @@ async function handleTelegram(
 
     return;
   }
-
-
-  /* /count */
 
   if (text === "/count") {
 
@@ -825,9 +863,6 @@ async function handleTelegram(
 
     return;
   }
-
-
-  /* /cleanup */
 
   if (text === "/cleanup") {
 
@@ -859,9 +894,6 @@ async function handleTelegram(
     return;
   }
 
-
-  /* /version */
-
   if (text === "/version") {
 
     await sendMessage(
@@ -873,13 +905,11 @@ async function handleTelegram(
     return;
   }
 
-
   const mode =
     await getMode(
       env,
       chatId
     );
-
 
   if (mode === "name") {
 
@@ -892,7 +922,6 @@ async function handleTelegram(
     return;
   }
 
-
   if (mode === "phone") {
 
     await searchByPhone(
@@ -904,11 +933,10 @@ async function handleTelegram(
     return;
   }
 
-
   /*
-     ئەگەر session ون بوو،
-     هەر ناوێک بنووسرێت
-     بە ناو دەگەڕێت.
+     ئەگەر session لە DB نەماوە،
+     هەر ناوێک بنووسرێت وەک گەڕانی ناو
+     مامەڵەی لەگەڵ دەکەین.
   */
 
   if (text) {
@@ -922,16 +950,16 @@ async function handleTelegram(
     return;
   }
 
-
   await sendMainMenu(
     env.BOT_TOKEN,
     chatId
   );
+
 }
 
 
 /* =====================================================
-   CALLBACK
+   TELEGRAM CALLBACK
    ===================================================== */
 
 async function handleCallback(
@@ -948,7 +976,6 @@ async function handleCallback(
 
   const data =
     query.data || "";
-
 
   if (data === "search_name") {
 
@@ -972,7 +999,6 @@ async function handleCallback(
     return;
   }
 
-
   if (data === "search_phone") {
 
     await setMode(
@@ -995,7 +1021,6 @@ async function handleCallback(
     return;
   }
 
-
   if (data === "main_menu") {
 
     await setMode(
@@ -1017,10 +1042,13 @@ async function handleCallback(
     return;
   }
 
+  /*
+     کاتێک ناوی کەسەکە دادەگیرێت،
+     ئەم callback ـە هەمان تۆمارەی
+     تەواوی داتاکەی دەهێنێتەوە.
+  */
 
-  if (
-    data.startsWith("preview:")
-  ) {
+  if (data.startsWith("preview:")) {
 
     const id =
       data.slice(
@@ -1040,11 +1068,12 @@ async function handleCallback(
 
     return;
   }
+
 }
 
 
 /* =====================================================
-   NAME SEARCH
+   TELEGRAM NAME SEARCH
    ===================================================== */
 
 async function searchByName(
@@ -1054,10 +1083,7 @@ async function searchByName(
 ) {
 
   const search =
-    normalizeName(
-      text
-    );
-
+    normalizeName(text);
 
   if (!search) {
 
@@ -1070,64 +1096,55 @@ async function searchByName(
     return;
   }
 
-
   const people =
-    await getPeople(
-      env
-    );
-
+    await getPeople(env);
 
   const matched =
-    people.filter(
-      person =>
-        exactNamePhraseMatch(
-          person.name,
-          search
-        )
+    people.filter(person =>
+      exactNamePhraseMatch(
+        person.name,
+        search
+      )
     );
-
 
   const results =
     deduplicatePeopleByName(
       matched
-    ).slice(
-      0,
-      50
-    );
-
+    ).slice(0, 50);
 
   if (!results.length) {
 
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
-      `❌ ئەم ناوە نەدۆزرایەوە:\n\n${text}`
+      `❌ ببورە، ئەم ناوە نەدۆزرایەوە.\n\n🔎 «${text}»`
     );
 
     return;
   }
 
-
   const buttons = [];
 
+  for (const person of results) {
 
-  for (
-    const person of results
-  ) {
+    /*
+       لە لیستەکەدا تەنها ناوی کەسەکە
+       و تەمەن و شار پیشان دەدرێت.
+       بە کرتەکردنەوە هەموو داتا دەکرێتەوە.
+    */
+
+    const label =
+      makePersonLabel(person);
 
     buttons.push([
       {
-        text:
-          makePersonLabel(
-            person
-          ),
-
+        text: label,
         callback_data:
           `preview:${String(person.id)}`
       }
     ]);
-  }
 
+  }
 
   buttons.push([
     {
@@ -1139,18 +1156,18 @@ async function searchByName(
     }
   ]);
 
-
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
     chatId,
-    `🔎 ${results.length} ئەنجام`,
+    `🔎 ${results.length} ئەنجام دۆزرایەوە.`,
     buttons
   );
+
 }
 
 
 /* =====================================================
-   PHONE SEARCH
+   TELEGRAM PHONE SEARCH
    ===================================================== */
 
 async function searchByPhone(
@@ -1160,10 +1177,7 @@ async function searchByPhone(
 ) {
 
   const phone =
-    normalizePhone(
-      text
-    );
-
+    normalizePhone(text);
 
   if (!phone) {
 
@@ -1176,30 +1190,20 @@ async function searchByPhone(
     return;
   }
 
-
   const people =
-    await getPeople(
-      env
-    );
-
+    await getPeople(env);
 
   const matched =
-    people.filter(
-      person =>
-        normalizePhone(
-          person.phone
-        ).includes(phone)
+    people.filter(person =>
+      normalizePhone(
+        person.phone
+      ).includes(phone)
     );
-
 
   const results =
     deduplicatePeopleByName(
       matched
-    ).slice(
-      0,
-      50
-    );
-
+    ).slice(0, 50);
 
   if (!results.length) {
 
@@ -1212,27 +1216,22 @@ async function searchByPhone(
     return;
   }
 
-
   const buttons = [];
 
+  for (const person of results) {
 
-  for (
-    const person of results
-  ) {
+    const label =
+      makePersonLabel(person);
 
     buttons.push([
       {
-        text:
-          makePersonLabel(
-            person
-          ),
-
+        text: label,
         callback_data:
           `preview:${String(person.id)}`
       }
     ]);
-  }
 
+  }
 
   buttons.push([
     {
@@ -1244,91 +1243,93 @@ async function searchByPhone(
     }
   ]);
 
-
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
     chatId,
-    `📱 ${results.length} ئەنجام`,
+    `📱 ${results.length} ئەنجام دۆزرایەوە.`,
     buttons
   );
+
 }
 
 
 /* =====================================================
-   PERSON LABEL
+   MAKE PERSON LABEL
    ===================================================== */
 
-function makePersonLabel(
-  person
-) {
+function makePersonLabel(person) {
 
   const name =
     String(
       person?.name || "بێ ناو"
     )
       .trim()
-      .replace(
-        /\s+/g,
-        " "
-      );
-
-
-  const city =
-    getCity(
-      person
-    );
-
+      .replace(/\s+/g, " ");
 
   const age =
-    getAge(
-      person
-    );
+    getAge(person);
 
+  const city =
+    getCity(person);
 
   const parts = [];
-
 
   if (name) {
     parts.push(name);
   }
 
-
   if (city) {
     parts.push(city);
   }
 
-
   if (age) {
-    parts.push(
-      `${age} ساڵ`
-    );
+    parts.push(`${age} ساڵ`);
   }
 
-
   let label =
-    parts.join(
-      " — "
-    );
-
+    parts.join(" — ");
 
   if (!label) {
     label = "بێ ناو";
   }
 
-
-  if (
-    label.length <= 64
-  ) {
-
+  if (label.length <= 64) {
     return label;
-
   }
 
+  const suffixParts = [];
 
-  return label.slice(
-    0,
-    63
-  ) + "…";
+  if (city) {
+    suffixParts.push(city);
+  }
+
+  if (age) {
+    suffixParts.push(`${age} ساڵ`);
+  }
+
+  const suffix =
+    suffixParts.length
+      ? ` — ${suffixParts.join(" — ")}`
+      : "";
+
+  const available =
+    Math.max(
+      5,
+      64 - suffix.length - 2
+    );
+
+  const shortName =
+    name
+      .slice(
+        0,
+        available
+      )
+      .trim();
+
+  return (
+    `${shortName}…${suffix}`
+  );
+
 }
 
 
@@ -1336,63 +1337,41 @@ function makePersonLabel(
    GET AGE
    ===================================================== */
 
-function getAge(
-  person
-) {
+function getAge(person) {
 
   const birth =
-    getBirth(
-      person
-    );
-
+    getBirth(person);
 
   if (!birth) {
     return "";
   }
 
-
   const birthYear =
-    Number(
-      birth
-    );
-
+    Number(birth);
 
   const currentYear =
-    new Date()
-      .getFullYear();
-
+    new Date().getFullYear();
 
   if (
-    !Number.isFinite(
-      birthYear
-    ) ||
+    !Number.isFinite(birthYear) ||
     birthYear < 1900 ||
     birthYear > currentYear
   ) {
-
     return "";
-
   }
 
-
   const age =
-    currentYear -
-    birthYear;
-
+    currentYear - birthYear;
 
   if (
     age < 0 ||
     age > 130
   ) {
-
     return "";
-
   }
 
+  return String(age);
 
-  return String(
-    age
-  );
 }
 
 
@@ -1400,78 +1379,87 @@ function getAge(
    GET CITY
    ===================================================== */
 
-function getCity(
-  person
-) {
+function getCity(person) {
 
   let text =
     String(
       person?.more || ""
     ).trim();
 
-
   if (!text) {
     return "";
   }
 
-
   text =
-    normalizeDigits(
-      text
-    );
+    normalizeDigits(text);
 
+  /*
+     شاری کوردی:
+     شار: کۆیە
+     شاری: کۆیە
+
+     هەروەها:
+     city: Erbil
+     مدينة: اربيل
+     المحافظة: اربيل
+  */
 
   const patterns = [
 
-    /(?:^|[\n\r|])\s*(?:شار|شاری)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu,
+    /(?:^|[\n|])\s*(?:شار|شاری)\s*[:：=\-]?\s*([^\n|,،;]+)/iu,
 
-    /(?:^|[\n\r|])\s*(?:city|مدينة)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu,
+    /(?:^|[\n|])\s*(?:city|city\s*name)\s*[:：=\-]?\s*([^\n|,،;]+)/iu,
 
-    /(?:^|[\n\r|])\s*(?:ناوچە|ناوچەی)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu,
-
-    /(?:^|[\n\r|])\s*(?:پارێزگا|پارێزگای)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu
+    /(?:^|[\n|])\s*(?:مدينة|المحافظة|محافظة)\s*[:：=\-]?\s*([^\n|,،;]+)/iu
 
   ];
 
-
-  for (
-    const pattern of patterns
-  ) {
+  for (const pattern of patterns) {
 
     const match =
-      text.match(
-        pattern
-      );
-
+      text.match(pattern);
 
     if (
       match &&
       match[1]
     ) {
 
-      return String(
-        match[1]
-      )
-        .replace(
-          /[👤👥📱📅📝🔎🏙️]/gu,
-          ""
-        )
-        .replace(
-          /\s+/g,
-          " "
-        )
-        .trim();
+      let city =
+        String(
+          match[1]
+        ).trim();
+
+      city =
+        city
+          .replace(
+            /[.،,;|]+$/g,
+            ""
+          )
+          .replace(
+            /[👤👥📱📅📝🔎🏙️✅]+$/gu,
+            ""
+          )
+          .replace(
+            /\s+/g,
+            " "
+          )
+          .trim();
+
+      if (city) {
+        return city;
+      }
 
     }
+
   }
 
-
   return "";
+
 }
 
 
 /* =====================================================
-   PREVIEW
+   SHOW ALL PERSON DATA
    ===================================================== */
 
 async function showPersonPreview(
@@ -1486,7 +1474,6 @@ async function showPersonPreview(
       id
     );
 
-
   if (!person) {
 
     await sendMessage(
@@ -1498,14 +1485,59 @@ async function showPersonPreview(
     return;
   }
 
+  /*
+     گرنگ:
+
+     لێرە هیچ داتایەک لە more
+     پاک ناکرێتەوە.
+
+     هەموو ئەوەی لە سایتەکە بۆ
+     ئەم ID ـە تۆمار کراوە دەردەخەین.
+  */
+
+  const name =
+    String(
+      person.name || ""
+    ).trim();
+
+  const phone =
+    String(
+      person.phone || ""
+    ).trim();
+
+  const more =
+    String(
+      person.more || ""
+    ).trim();
+
+  let text = "";
+
+  text += "👤 ناو: ";
+  text += name || "نییە";
+  text += "\n\n";
+
+  text += "📱 ژمارەی تەلەفون: ";
+  text += phone || "نییە";
+  text += "\n\n";
+
+  text += "📋 هەموو زانیارییەکان:\n";
+
+  if (more) {
+
+    text += more;
+
+  } else {
+
+    text += "هیچ زانیارییەکی زیادە نییە.";
+
+  }
 
   await sendMessage(
     env.BOT_TOKEN,
     chatId,
-    makePersonLabel(
-      person
-    )
+    text
   );
+
 }
 
 
@@ -1513,9 +1545,7 @@ async function showPersonPreview(
    GET PEOPLE
    ===================================================== */
 
-async function getPeople(
-  env
-) {
+async function getPeople(env) {
 
   const result =
     await env.DB.prepare(`
@@ -1525,10 +1555,10 @@ async function getPeople(
       LIMIT 10000
     `).all();
 
-
   return deduplicatePeopleByName(
     result.results || []
   );
+
 }
 
 
@@ -1542,15 +1572,16 @@ async function getPerson(
 ) {
 
   const cleanId =
-    String(
-      id || ""
-    ).trim();
-
+    String(id || "").trim();
 
   if (!cleanId) {
     return null;
   }
 
+  /*
+     یەکەم جار بە ID ـی خۆی
+     داتا دەهێنینەوە.
+  */
 
   const person =
     await env.DB
@@ -1560,18 +1591,20 @@ async function getPerson(
         WHERE id = ?
         LIMIT 1
       `)
-      .bind(
-        cleanId
-      )
+      .bind(cleanId)
       .first();
 
+  if (person) {
+    return person;
+  }
 
-  return person || null;
+  return null;
+
 }
 
 
 /* =====================================================
-   REMOVE DUPLICATES
+   REMOVE DUPLICATES IN MEMORY
    ===================================================== */
 
 function deduplicatePeopleByName(
@@ -1583,49 +1616,32 @@ function deduplicatePeopleByName(
 
   const result = [];
 
-
-  for (
-    const person of people || []
-  ) {
+  for (const person of people || []) {
 
     const normalized =
       normalizeName(
         person?.name
       );
 
-
     if (!normalized) {
 
-      result.push(
-        person
-      );
+      result.push(person);
 
       continue;
     }
 
-
-    if (
-      seen.has(
-        normalized
-      )
-    ) {
-
+    if (seen.has(normalized)) {
       continue;
     }
 
+    seen.add(normalized);
 
-    seen.add(
-      normalized
-    );
+    result.push(person);
 
-
-    result.push(
-      person
-    );
   }
 
-
   return result;
+
 }
 
 
@@ -1633,20 +1649,15 @@ function deduplicatePeopleByName(
    DIGIT NORMALIZATION
    ===================================================== */
 
-function normalizeDigits(
-  value
-) {
+function normalizeDigits(value) {
 
-  return String(
-    value || ""
-  )
+  return String(value || "")
 
     .replace(
       /[٠-٩]/g,
       digit =>
         String(
-          digit.charCodeAt(0) -
-          0x0660
+          digit.charCodeAt(0) - 0x0660
         )
     )
 
@@ -1654,58 +1665,103 @@ function normalizeDigits(
       /[۰-۹]/g,
       digit =>
         String(
-          digit.charCodeAt(0) -
-          0x06F0
+          digit.charCodeAt(0) - 0x06F0
         )
     );
+
 }
 
 
 /* =====================================================
-   GET BIRTH YEAR
+   BIRTH
    ===================================================== */
 
-function getBirth(
-  person
-) {
+function getBirth(person) {
 
   const original =
     String(
       person?.more || ""
     );
 
-
   if (!original.trim()) {
     return "";
   }
-
 
   const more =
     normalizeDigits(
       original
     );
 
-
   const labeled =
     more.match(
       /(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\s*لەدایکبوون|ساڵی\s*لە\s*دایک\s*بوون|birth|year\s*of\s*birth)[^\d]{0,50}((?:18|19|20)\d{2})/i
     );
 
-
   if (labeled) {
     return labeled[1];
   }
-
 
   const year =
     more.match(
       /(?:^|[^\d])((?:18|19|20)\d{2})(?:$|[^\d])/m
     );
 
-
   return year
     ? year[1]
     : "";
+
+}
+
+
+/* =====================================================
+   CLEAN MORE
+   ===================================================== */
+
+function cleanMore(
+  more,
+  birth
+) {
+
+  let text =
+    String(
+      more || ""
+    ).trim();
+
+  if (!text) {
+    return "";
+  }
+
+  if (!birth) {
+    return text;
+  }
+
+  text =
+    normalizeDigits(
+      text
+    );
+
+  text =
+    text.replace(
+      new RegExp(
+        `(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\\s*لەدایکبوون|ساڵی\\s*لە\\s*دایک\\s*بوون|birth|year\\s*of\\s*birth)[^\\d]{0,50}${birth}`,
+        "i"
+      ),
+      ""
+    );
+
+  if (
+    text.trim() === birth
+  ) {
+    return "";
+  }
+
+  return text
+    .replace(
+      /\n{3,}/g,
+      "\n\n"
+    )
+    .trim();
+
 }
 
 
@@ -1743,6 +1799,7 @@ async function sendMainMenu(
       ]
     ]
   );
+
 }
 
 
@@ -1778,6 +1835,7 @@ async function sendMessage(
       })
     }
   );
+
 }
 
 
@@ -1819,6 +1877,7 @@ async function sendMessageWithKeyboard(
       })
     }
   );
+
 }
 
 
@@ -1853,6 +1912,7 @@ async function answerCallback(
       })
     }
   );
+
 }
 
 
@@ -1873,7 +1933,6 @@ async function setMode(
     )
   `).run();
 
-
   await env.DB.prepare(`
     INSERT OR REPLACE INTO bot_sessions
     (chat_id, mode)
@@ -1884,6 +1943,7 @@ async function setMode(
     mode
   )
   .run();
+
 }
 
 
@@ -1899,7 +1959,6 @@ async function getMode(
     )
   `).run();
 
-
   const row =
     await env.DB.prepare(`
       SELECT mode
@@ -1911,11 +1970,9 @@ async function getMode(
     )
     .first();
 
+  return row?.mode ||
+    "menu";
 
-  return (
-    row?.mode ||
-    "menu"
-  );
 }
 
 
@@ -1927,9 +1984,7 @@ function normalizeName(
   value
 ) {
 
-  return String(
-    value || ""
-  )
+  return String(value || "")
     .toLowerCase()
     .normalize("NFKC")
 
@@ -1974,6 +2029,7 @@ function normalizeName(
     )
 
     .trim();
+
 }
 
 
@@ -1987,16 +2043,10 @@ function exactNamePhraseMatch(
 ) {
 
   const fullName =
-    normalizeName(
-      name
-    );
-
+    normalizeName(name);
 
   const query =
-    normalizeName(
-      search
-    );
-
+    normalizeName(search);
 
   if (
     !fullName ||
@@ -2005,83 +2055,37 @@ function exactNamePhraseMatch(
     return false;
   }
 
-
   if (
     fullName === query
   ) {
     return true;
   }
 
-
   if (
-    fullName.includes(
-      query
-    )
+    fullName.includes(query)
   ) {
     return true;
   }
 
-
   const nameWords =
-    fullName.split(
-      " "
-    );
-
+    fullName
+      .split(/\s+/)
+      .filter(Boolean);
 
   const queryWords =
-    query.split(
-      " "
-    );
+    query
+      .split(/\s+/)
+      .filter(Boolean);
 
+  return queryWords.every(
+    word =>
+      nameWords.some(
+        nameWord =>
+          nameWord.includes(word) ||
+          word.includes(nameWord)
+      )
+  );
 
-  if (
-    queryWords.length >
-    nameWords.length
-  ) {
-    return false;
-  }
-
-
-  for (
-    let i = 0;
-    i <=
-      nameWords.length -
-      queryWords.length;
-    i++
-  ) {
-
-    let matched =
-      true;
-
-
-    for (
-      let j = 0;
-      j < queryWords.length;
-      j++
-    ) {
-
-      if (
-        !nameWords[i + j]
-          .startsWith(
-            queryWords[j]
-          )
-      ) {
-
-        matched =
-          false;
-
-        break;
-      }
-    }
-
-
-    if (matched) {
-      return true;
-    }
-  }
-
-
-  return false;
 }
 
 
@@ -2100,4 +2104,5 @@ function normalizePhone(
       /[^\d+]/g,
       ""
     );
+
 }

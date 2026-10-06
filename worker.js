@@ -7,129 +7,76 @@ const CORS_HEADERS = {
 
 const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V11";
 
-
 function response(body, status = 200, headers = {}) {
-
-  return new Response(
-    body,
-    {
-      status,
-      headers: {
-        ...CORS_HEADERS,
-        ...headers
-      }
+  return new Response(body, {
+    status,
+    headers: {
+      ...CORS_HEADERS,
+      ...headers
     }
-  );
-
+  });
 }
 
-
 function json(data, status = 200) {
-
   return response(
     JSON.stringify(data),
     status,
     {
-      "Content-Type":
-        "application/json; charset=utf-8"
+      "Content-Type": "application/json; charset=utf-8"
     }
   );
-
 }
 
-
 export default {
-
   async fetch(request, env) {
 
-    const url =
-      new URL(request.url);
-
+    const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
-
-      return response(
-        null,
-        204
-      );
-
+      return response(null, 204);
     }
-
 
     if (
       url.pathname === "/api/search/name" &&
       request.method === "GET"
     ) {
-
-      return searchNameAPI(
-        request,
-        env
-      );
-
+      return searchNameAPI(request, env);
     }
-
 
     if (
       url.pathname === "/api/search/phone" &&
       request.method === "GET"
     ) {
-
-      return searchPhoneAPI(
-        request,
-        env
-      );
-
+      return searchPhoneAPI(request, env);
     }
-
 
     if (
       url.pathname === "/api/import" &&
       request.method === "POST"
     ) {
-
-      return importPeople(
-        request,
-        env
-      );
-
+      return importPeople(request, env);
     }
-
 
     if (
       url.pathname === "/api/deduplicate" &&
       request.method === "POST"
     ) {
-
-      return deduplicateAPI(
-        request,
-        env
-      );
-
+      return deduplicateAPI(request, env);
     }
-
 
     if (
       url.pathname === "/api/telegram/export" &&
       request.method === "POST"
     ) {
-
-      return telegramExport(
-        request,
-        env
-      );
-
+      return telegramExport(request, env);
     }
-
 
     if (
       url.pathname === "/telegram/webhook" &&
       request.method === "POST"
     ) {
-
       try {
-
-        const update =
-          await request.json();
+        const update = await request.json();
 
         await handleTelegram(
           update,
@@ -158,14 +105,10 @@ export default {
             headers: CORS_HEADERS
           }
         );
-
       }
-
     }
 
-
     if (url.pathname === "/") {
-
       return new Response(
         `Data Zanyari Worker is running.\nVersion: ${WORKER_VERSION}`,
         {
@@ -173,9 +116,7 @@ export default {
           headers: CORS_HEADERS
         }
       );
-
     }
-
 
     return json(
       {
@@ -184,25 +125,19 @@ export default {
       },
       404
     );
-
   }
-
 };
 
 
 /* =====================================================
-   WEBSITE NAME SEARCH API
+   WEBSITE NAME SEARCH
    ===================================================== */
 
-async function searchNameAPI(
-  request,
-  env
-) {
+async function searchNameAPI(request, env) {
 
   try {
 
-    const url =
-      new URL(request.url);
+    const url = new URL(request.url);
 
     const query =
       url.searchParams.get("q") || "";
@@ -210,17 +145,13 @@ async function searchNameAPI(
     const search =
       normalizeName(query);
 
-
     if (!search) {
-
       return json({
         ok: true,
         people: [],
         count: 0
       });
-
     }
-
 
     const result =
       await env.DB.prepare(`
@@ -230,36 +161,27 @@ async function searchNameAPI(
         LIMIT 10000
       `).all();
 
-
     const people =
       result.results || [];
 
-
     const matched =
-      people.filter(
-        person =>
-          exactNamePhraseMatch(
-            person.name,
-            search
-          )
+      people.filter(person =>
+        exactNamePhraseMatch(
+          person.name,
+          search
+        )
       );
-
 
     const results =
       deduplicatePeopleByName(
         matched
-      ).slice(
-        0,
-        50
-      );
-
+      ).slice(0, 50);
 
     return json({
       ok: true,
       people: results,
       count: results.length
     });
-
 
   } catch (error) {
 
@@ -268,27 +190,19 @@ async function searchNameAPI(
       error
     );
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
-
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
   }
-
 }
 
 
 /* =====================================================
-   WEBSITE PHONE SEARCH API
+   WEBSITE PHONE SEARCH
    ===================================================== */
 
-async function searchPhoneAPI(
-  request,
-  env
-) {
+async function searchPhoneAPI(request, env) {
 
   try {
 
@@ -301,17 +215,13 @@ async function searchPhoneAPI(
     const phone =
       normalizePhone(query);
 
-
     if (!phone) {
-
       return json({
         ok: true,
         people: [],
         count: 0
       });
-
     }
-
 
     const result =
       await env.DB.prepare(`
@@ -321,35 +231,26 @@ async function searchPhoneAPI(
         LIMIT 10000
       `).all();
 
-
     const people =
       result.results || [];
 
-
     const matched =
-      people.filter(
-        person =>
-          normalizePhone(
-            person.phone
-          ).includes(phone)
+      people.filter(person =>
+        normalizePhone(
+          person.phone
+        ).includes(phone)
       );
-
 
     const results =
       deduplicatePeopleByName(
         matched
-      ).slice(
-        0,
-        50
-      );
-
+      ).slice(0, 50);
 
     return json({
       ok: true,
       people: results,
       count: results.length
     });
-
 
   } catch (error) {
 
@@ -358,27 +259,19 @@ async function searchPhoneAPI(
       error
     );
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
-
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
   }
-
 }
 
 
 /* =====================================================
-   IMPORT PEOPLE
+   IMPORT
    ===================================================== */
 
-async function importPeople(
-  request,
-  env
-) {
+async function importPeople(request, env) {
 
   try {
 
@@ -387,19 +280,15 @@ async function importPeople(
         "X-Import-Key"
       );
 
-
     if (
       !env.IMPORT_KEY ||
       key !== env.IMPORT_KEY
     ) {
-
       return response(
         "Unauthorized",
         401
       );
-
     }
-
 
     const body =
       await request.json();
@@ -407,49 +296,39 @@ async function importPeople(
     const people =
       body.people;
 
-
     if (!Array.isArray(people)) {
-
-      return json(
-        {
-          ok: false,
-          error:
-            "people must be an array"
-        },
-        400
-      );
-
+      return json({
+        ok: false,
+        error:
+          "people must be an array"
+      }, 400);
     }
-
 
     const uniquePeople =
       deduplicatePeopleByName(
-        people.map(
-          person => ({
-            id:
-              String(
-                person.id ||
-                crypto.randomUUID()
-              ),
+        people.map(person => ({
+          id:
+            String(
+              person.id ||
+              crypto.randomUUID()
+            ),
 
-            name:
-              String(
-                person.name || ""
-              ),
+          name:
+            String(
+              person.name || ""
+            ),
 
-            phone:
-              String(
-                person.phone || ""
-              ),
+          phone:
+            String(
+              person.phone || ""
+            ),
 
-            more:
-              String(
-                person.more || ""
-              )
-          })
-        )
+          more:
+            String(
+              person.more || ""
+            )
+        }))
       );
-
 
     for (
       let i = 0;
@@ -463,40 +342,33 @@ async function importPeople(
           i + 50
         );
 
-
       const statements =
-        chunk.map(
-          person => {
+        chunk.map(person => {
 
-            return env.DB
-              .prepare(`
-                INSERT OR REPLACE INTO people
-                (id, name, phone, more)
-                VALUES (?, ?, ?, ?)
-              `)
-              .bind(
-                String(person.id),
-                String(person.name),
-                String(person.phone),
-                String(person.more)
-              );
+          return env.DB
+            .prepare(`
+              INSERT OR REPLACE INTO people
+              (id, name, phone, more)
+              VALUES (?, ?, ?, ?)
+            `)
+            .bind(
+              String(person.id),
+              String(person.name),
+              String(person.phone),
+              String(person.more)
+            );
 
-          }
-        );
-
+        });
 
       await env.DB.batch(
         statements
       );
-
     }
-
 
     const cleanup =
       await deduplicateDatabase(
         env
       );
-
 
     return json({
       ok: true,
@@ -506,7 +378,6 @@ async function importPeople(
         cleanup.deleted
     });
 
-
   } catch (error) {
 
     console.error(
@@ -514,27 +385,19 @@ async function importPeople(
       error
     );
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
-
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
   }
-
 }
 
 
 /* =====================================================
-   MANUAL DEDUPLICATE API
+   DEDUPLICATE API
    ===================================================== */
 
-async function deduplicateAPI(
-  request,
-  env
-) {
+async function deduplicateAPI(request, env) {
 
   try {
 
@@ -543,25 +406,20 @@ async function deduplicateAPI(
         "X-Import-Key"
       );
 
-
     if (
       !env.IMPORT_KEY ||
       key !== env.IMPORT_KEY
     ) {
-
       return response(
         "Unauthorized",
         401
       );
-
     }
-
 
     const result =
       await deduplicateDatabase(
         env
       );
-
 
     return json({
       ok: true,
@@ -573,7 +431,6 @@ async function deduplicateAPI(
         result.remaining
     });
 
-
   } catch (error) {
 
     console.error(
@@ -581,16 +438,11 @@ async function deduplicateAPI(
       error
     );
 
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
-
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
   }
-
 }
 
 
@@ -598,9 +450,7 @@ async function deduplicateAPI(
    DEDUPLICATE DATABASE
    ===================================================== */
 
-async function deduplicateDatabase(
-  env
-) {
+async function deduplicateDatabase(env) {
 
   const result =
     await env.DB.prepare(`
@@ -611,32 +461,24 @@ async function deduplicateDatabase(
       LIMIT 10000
     `).all();
 
-
   const people =
     result.results || [];
-
 
   const seen =
     new Set();
 
-  const duplicateIds =
-    [];
+  const duplicateIds = [];
 
-
-  for (
-    const person of people
-  ) {
+  for (const person of people) {
 
     const name =
       normalizeName(
         person.name
       );
 
-
     if (!name) {
       continue;
     }
-
 
     if (seen.has(name)) {
 
@@ -647,14 +489,10 @@ async function deduplicateDatabase(
     } else {
 
       seen.add(name);
-
     }
-
   }
 
-
   let deleted = 0;
-
 
   for (
     let i = 0;
@@ -668,18 +506,15 @@ async function deduplicateDatabase(
         i + 40
       );
 
-
     const statements =
-      chunk.map(
-        id =>
-          env.DB
-            .prepare(`
-              DELETE FROM people
-              WHERE id = ?
-            `)
-            .bind(id)
+      chunk.map(id =>
+        env.DB
+          .prepare(`
+            DELETE FROM people
+            WHERE id = ?
+          `)
+          .bind(id)
       );
-
 
     if (statements.length) {
 
@@ -689,11 +524,8 @@ async function deduplicateDatabase(
 
       deleted +=
         statements.length;
-
     }
-
   }
-
 
   const countResult =
     await env.DB
@@ -702,7 +534,6 @@ async function deduplicateDatabase(
       )
       .first();
 
-
   return {
     deleted,
     remaining:
@@ -710,7 +541,6 @@ async function deduplicateDatabase(
         countResult?.count || 0
       )
   };
-
 }
 
 
@@ -718,40 +548,25 @@ async function deduplicateDatabase(
    TELEGRAM EXPORT
    ===================================================== */
 
-async function telegramExport(
-  request,
-  env
-) {
+async function telegramExport(request, env) {
 
   try {
 
     if (!env.BOT_TOKEN) {
-
-      return json(
-        {
-          ok: false,
-          error:
-            "BOT_TOKEN is not configured"
-        },
-        500
-      );
-
+      return json({
+        ok: false,
+        error:
+          "BOT_TOKEN is not configured"
+      }, 500);
     }
-
 
     if (!env.ADMIN_ID) {
-
-      return json(
-        {
-          ok: false,
-          error:
-            "ADMIN_ID is not configured"
-        },
-        500
-      );
-
+      return json({
+        ok: false,
+        error:
+          "ADMIN_ID is not configured"
+      }, 500);
     }
-
 
     const body =
       await request.json();
@@ -759,49 +574,33 @@ async function telegramExport(
     const people =
       body.people;
 
-
     if (!Array.isArray(people)) {
-
-      return json(
-        {
-          ok: false,
-          error:
-            "people must be an array"
-        },
-        400
-      );
-
+      return json({
+        ok: false,
+        error:
+          "people must be an array"
+      }, 400);
     }
-
 
     if (!people.length) {
-
-      return json(
-        {
-          ok: false,
-          error:
-            "No data to export"
-        },
-        400
-      );
-
+      return json({
+        ok: false,
+        error:
+          "No data to export"
+      }, 400);
     }
-
 
     const uniquePeople =
       deduplicatePeopleByName(
         people
       );
 
-
     let text =
       "گەڕانی ناوەکان - Export\n" +
       "========================\n\n";
 
-
     text +=
       `کۆی تۆمارەکان: ${uniquePeople.length}\n\n`;
-
 
     for (
       let i = 0;
@@ -812,32 +611,26 @@ async function telegramExport(
       const person =
         uniquePeople[i] || {};
 
-
       text +=
         "========================\n";
 
-
       text +=
         `#${i + 1}\n`;
-
 
       text +=
         `ناو: ${
           person.name || "-"
         }\n`;
 
-
       text +=
         `ژمارەی تەلەفون: ${
           person.phone || "-"
         }\n`;
 
-
       text +=
         `زانیاری زیاتر: ${
           person.more || "-"
         }\n`;
-
 
       if (
         person.id !== undefined &&
@@ -846,22 +639,16 @@ async function telegramExport(
 
         text +=
           `ID: ${person.id}\n`;
-
       }
 
-
       text += "\n";
-
     }
-
 
     text +=
       "========================\n";
 
-
     text +=
       "کۆتایی داتا\n";
-
 
     const file =
       new Blob(
@@ -872,29 +659,24 @@ async function telegramExport(
         }
       );
 
-
     const form =
       new FormData();
-
 
     form.append(
       "chat_id",
       String(env.ADMIN_ID)
     );
 
-
     form.append(
       "caption",
       `📦 هەموو داتا\n📊 کۆی تۆمارەکان: ${uniquePeople.length}`
     );
-
 
     form.append(
       "document",
       file,
       "people-export.txt"
     );
-
 
     const telegramResponse =
       await fetch(
@@ -905,9 +687,7 @@ async function telegramExport(
         }
       );
 
-
     let telegramResult;
-
 
     try {
 
@@ -921,9 +701,7 @@ async function telegramExport(
         description:
           "Invalid Telegram response"
       };
-
     }
-
 
     if (
       !telegramResponse.ok ||
@@ -935,19 +713,13 @@ async function telegramExport(
         telegramResult
       );
 
-
-      return json(
-        {
-          ok: false,
-          error:
-            telegramResult.description ||
-            "Telegram API error"
-        },
-        500
-      );
-
+      return json({
+        ok: false,
+        error:
+          telegramResult.description ||
+          "Telegram API error"
+      }, 500);
     }
-
 
     return json({
       ok: true,
@@ -959,7 +731,6 @@ async function telegramExport(
       type: "txt"
     });
 
-
   } catch (error) {
 
     console.error(
@@ -967,22 +738,16 @@ async function telegramExport(
       error
     );
 
-
-    return json(
-      {
-        ok: false,
-        error: String(error)
-      },
-      500
-    );
-
+    return json({
+      ok: false,
+      error: String(error)
+    }, 500);
   }
-
 }
 
 
 /* =====================================================
-   TELEGRAM
+   TELEGRAM MAIN
    ===================================================== */
 
 async function handleTelegram(
@@ -998,35 +763,30 @@ async function handleTelegram(
     );
 
     return;
-
   }
-
 
   const message =
     update.message;
-
 
   if (
     !message ||
     !message.text
   ) {
-
     return;
-
   }
-
 
   const chatId =
     message.chat.id;
-
 
   const text =
     message.text.trim();
 
 
+  /* /start */
+
   if (
     text === "/start" ||
-    text === "/start@"
+    text.startsWith("/start@")
   ) {
 
     await setMode(
@@ -1035,17 +795,16 @@ async function handleTelegram(
       "menu"
     );
 
-
     await sendMainMenu(
       env.BOT_TOKEN,
       chatId
     );
 
-
     return;
-
   }
 
+
+  /* /count */
 
   if (text === "/count") {
 
@@ -1056,7 +815,6 @@ async function handleTelegram(
         )
         .first();
 
-
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
@@ -1065,11 +823,11 @@ async function handleTelegram(
       }`
     );
 
-
     return;
-
   }
 
+
+  /* /cleanup */
 
   if (text === "/cleanup") {
 
@@ -1084,17 +842,13 @@ async function handleTelegram(
         "❌ ئەم فرمانە تەنها بۆ ئەدمینە."
       );
 
-
       return;
-
     }
-
 
     const result =
       await deduplicateDatabase(
         env
       );
-
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -1102,11 +856,11 @@ async function handleTelegram(
       `✅ پاککردنەوە تەواو بوو.\n\n🗑️ دووبارە سڕایەوە: ${result.deleted}\n📊 داتای ماوە: ${result.remaining}`
     );
 
-
     return;
-
   }
 
+
+  /* /version */
 
   if (text === "/version") {
 
@@ -1116,9 +870,7 @@ async function handleTelegram(
       `🔧 وەشانی Worker:\n${WORKER_VERSION}`
     );
 
-
     return;
-
   }
 
 
@@ -1137,9 +889,7 @@ async function handleTelegram(
       text
     );
 
-
     return;
-
   }
 
 
@@ -1151,9 +901,25 @@ async function handleTelegram(
       text
     );
 
+    return;
+  }
+
+
+  /*
+     ئەگەر session ون بوو،
+     هەر ناوێک بنووسرێت
+     بە ناو دەگەڕێت.
+  */
+
+  if (text) {
+
+    await searchByName(
+      env,
+      chatId,
+      text
+    );
 
     return;
-
   }
 
 
@@ -1161,12 +927,11 @@ async function handleTelegram(
     env.BOT_TOKEN,
     chatId
   );
-
 }
 
 
 /* =====================================================
-   TELEGRAM CALLBACK
+   CALLBACK
    ===================================================== */
 
 async function handleCallback(
@@ -1177,11 +942,9 @@ async function handleCallback(
   const chatId =
     query.message?.chat?.id;
 
-
   if (!chatId) {
     return;
   }
-
 
   const data =
     query.data || "";
@@ -1195,12 +958,10 @@ async function handleCallback(
       "name"
     );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -1208,9 +969,7 @@ async function handleCallback(
       "👤 تکایە ناوی کەسەکە بنووسە:"
     );
 
-
     return;
-
   }
 
 
@@ -1222,12 +981,10 @@ async function handleCallback(
       "phone"
     );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await sendMessage(
       env.BOT_TOKEN,
@@ -1235,9 +992,7 @@ async function handleCallback(
       "📱 تکایە ژمارەی تەلەفون بنووسە:"
     );
 
-
     return;
-
   }
 
 
@@ -1249,21 +1004,17 @@ async function handleCallback(
       "menu"
     );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await sendMainMenu(
       env.BOT_TOKEN,
       chatId
     );
 
-
     return;
-
   }
 
 
@@ -1276,12 +1027,10 @@ async function handleCallback(
         "preview:".length
       );
 
-
     await answerCallback(
       env.BOT_TOKEN,
       query.id
     );
-
 
     await showPersonPreview(
       env,
@@ -1289,44 +1038,13 @@ async function handleCallback(
       id
     );
 
-
     return;
-
   }
-
-
-  if (
-    data.startsWith("person:")
-  ) {
-
-    const id =
-      data.slice(
-        "person:".length
-      );
-
-
-    await answerCallback(
-      env.BOT_TOKEN,
-      query.id
-    );
-
-
-    await showPerson(
-      env,
-      chatId,
-      id
-    );
-
-
-    return;
-
-  }
-
 }
 
 
 /* =====================================================
-   TELEGRAM NAME SEARCH
+   NAME SEARCH
    ===================================================== */
 
 async function searchByName(
@@ -1336,7 +1054,9 @@ async function searchByName(
 ) {
 
   const search =
-    normalizeName(text);
+    normalizeName(
+      text
+    );
 
 
   if (!search) {
@@ -1347,9 +1067,7 @@ async function searchByName(
       "👤 تکایە ناوێک بنووسە."
     );
 
-
     return;
-
   }
 
 
@@ -1383,12 +1101,10 @@ async function searchByName(
     await sendMessage(
       env.BOT_TOKEN,
       chatId,
-      `❌ ببورە، ئەم ناوە نەدۆزرایەوە.\n\n🔎 «${text}»`
+      `❌ ئەم ناوە نەدۆزرایەوە:\n\n${text}`
     );
 
-
     return;
-
   }
 
 
@@ -1410,7 +1126,6 @@ async function searchByName(
           `preview:${String(person.id)}`
       }
     ]);
-
   }
 
 
@@ -1428,15 +1143,14 @@ async function searchByName(
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
     chatId,
-    `🔎 ${results.length} ئەنجام دۆزرایەوە.`,
+    `🔎 ${results.length} ئەنجام`,
     buttons
   );
-
 }
 
 
 /* =====================================================
-   TELEGRAM PHONE SEARCH
+   PHONE SEARCH
    ===================================================== */
 
 async function searchByPhone(
@@ -1459,9 +1173,7 @@ async function searchByPhone(
       "📱 تکایە ژمارەی تەلەفون بنووسە."
     );
 
-
     return;
-
   }
 
 
@@ -1497,9 +1209,7 @@ async function searchByPhone(
       "❌ هیچ کەسێک بەو ژمارەیە نەدۆزرایەوە."
     );
 
-
     return;
-
   }
 
 
@@ -1521,7 +1231,6 @@ async function searchByPhone(
           `preview:${String(person.id)}`
       }
     ]);
-
   }
 
 
@@ -1539,15 +1248,14 @@ async function searchByPhone(
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,
     chatId,
-    `📱 ${results.length} ئەنجام دۆزرایەوە.`,
+    `📱 ${results.length} ئەنجام`,
     buttons
   );
-
 }
 
 
 /* =====================================================
-   MAKE PERSON LABEL
+   PERSON LABEL
    ===================================================== */
 
 function makePersonLabel(
@@ -1565,14 +1273,14 @@ function makePersonLabel(
       );
 
 
-  const age =
-    getAge(
+  const city =
+    getCity(
       person
     );
 
 
-  const city =
-    getCity(
+  const age =
+    getAge(
       person
     );
 
@@ -1581,29 +1289,19 @@ function makePersonLabel(
 
 
   if (name) {
-
-    parts.push(
-      name
-    );
-
-  }
-
-
-  if (age) {
-
-    parts.push(
-      `${age} ساڵ`
-    );
-
+    parts.push(name);
   }
 
 
   if (city) {
+    parts.push(city);
+  }
 
+
+  if (age) {
     parts.push(
-      city
+      `${age} ساڵ`
     );
-
   }
 
 
@@ -1614,18 +1312,8 @@ function makePersonLabel(
 
 
   if (!label) {
-
-    label =
-      "بێ ناو";
-
+    label = "بێ ناو";
   }
-
-
-  /*
-     ئەگەر ناوەکە زۆر درێژ بێت،
-     ناوەکە کورت دەکەینەوە.
-     تەمەن و شار دەمێنێتەوە.
-  */
 
 
   if (
@@ -1637,55 +1325,10 @@ function makePersonLabel(
   }
 
 
-  const suffixParts = [];
-
-
-  if (age) {
-
-    suffixParts.push(
-      `${age} ساڵ`
-    );
-
-  }
-
-
-  if (city) {
-
-    suffixParts.push(
-      city
-    );
-
-  }
-
-
-  const suffix =
-    suffixParts.length
-      ? ` — ${suffixParts.join(" — ")}`
-      : "";
-
-
-  const available =
-    Math.max(
-      5,
-      64 -
-      suffix.length -
-      1
-    );
-
-
-  const shortName =
-    name
-      .slice(
-        0,
-        available
-      )
-      .trim();
-
-
-  return (
-    `${shortName}…${suffix}`
-  );
-
+  return label.slice(
+    0,
+    63
+  ) + "…";
 }
 
 
@@ -1750,7 +1393,6 @@ function getAge(
   return String(
     age
   );
-
 }
 
 
@@ -1779,69 +1421,57 @@ function getCity(
     );
 
 
-  /*
-     ئەم بەشە شار لە:
-     شار: کۆیە
-     شاری: کۆیە
-     دەدۆزێتەوە.
-  */
+  const patterns = [
+
+    /(?:^|[\n\r|])\s*(?:شار|شاری)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu,
+
+    /(?:^|[\n\r|])\s*(?:city|مدينة)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu,
+
+    /(?:^|[\n\r|])\s*(?:ناوچە|ناوچەی)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu,
+
+    /(?:^|[\n\r|])\s*(?:پارێزگا|پارێزگای)\s*[:：=\-]?\s*([^\n\r|,،;]+)/iu
+
+  ];
 
 
-  const match =
-    text.match(
-      /(?:شار|شاری)\s*[:：\-]?\s*([^\n\r,،|]+)/iu
-    );
+  for (
+    const pattern of patterns
+  ) {
+
+    const match =
+      text.match(
+        pattern
+      );
 
 
-  if (!match) {
-    return "";
+    if (
+      match &&
+      match[1]
+    ) {
+
+      return String(
+        match[1]
+      )
+        .replace(
+          /[👤👥📱📅📝🔎🏙️]/gu,
+          ""
+        )
+        .replace(
+          /\s+/g,
+          " "
+        )
+        .trim();
+
+    }
   }
 
 
-  let city =
-    String(
-      match[1] || ""
-    ).trim();
-
-
-  city =
-    city
-      .replace(
-        /[👤👥📱📅📝🔎🏙️]/gu,
-        ""
-      )
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .replace(
-        /[.،,;|]+$/g,
-        ""
-      )
-      .trim();
-
-
-  /*
-     ئەگەر داتاکە لە هەمان ڕستەدا
-     زانیاری تری دوای شار هەبێت،
-     لێی دەبڕین.
-  */
-
-
-  city =
-    city.replace(
-      /\s+(?:موالید|موڵید|میلاد|لەدایکبوون|birth)\b.*$/iu,
-      ""
-    ).trim();
-
-
-  return city;
-
+  return "";
 }
 
 
 /* =====================================================
-   SHOW PERSON PREVIEW
+   PREVIEW
    ===================================================== */
 
 async function showPersonPreview(
@@ -1865,87 +1495,17 @@ async function showPersonPreview(
       "❌ داتا نەدۆزرایەوە."
     );
 
-
     return;
-
   }
-
-
-  /*
-     تەنها:
-     ناو — تەمەن — شار
-  */
-
-
-  const text =
-    makePersonLabel(
-      person
-    );
 
 
   await sendMessage(
     env.BOT_TOKEN,
     chatId,
-    text
-  );
-
-}
-
-
-/* =====================================================
-   SHOW PERSON
-   ===================================================== */
-
-async function showPerson(
-  env,
-  chatId,
-  id
-) {
-
-  const person =
-    await getPerson(
-      env,
-      id
-    );
-
-
-  if (!person) {
-
-    await sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "❌ داتا نەدۆزرایەوە."
-    );
-
-
-    return;
-
-  }
-
-
-  const text =
     makePersonLabel(
       person
-    );
-
-
-  await sendMessageWithKeyboard(
-    env.BOT_TOKEN,
-    chatId,
-    text,
-    [
-      [
-        {
-          text:
-            "⬅️ گەڕانەوە بۆ سەرەتا",
-
-          callback_data:
-            "main_menu"
-        }
-      ]
-    ]
+    )
   );
-
 }
 
 
@@ -1969,7 +1529,6 @@ async function getPeople(
   return deduplicatePeopleByName(
     result.results || []
   );
-
 }
 
 
@@ -1993,7 +1552,7 @@ async function getPerson(
   }
 
 
-  let person =
+  const person =
     await env.DB
       .prepare(`
         SELECT id, name, phone, more
@@ -2007,34 +1566,12 @@ async function getPerson(
       .first();
 
 
-  if (person) {
-    return person;
-  }
-
-
-  const people =
-    await getPeople(
-      env
-    );
-
-
-  person =
-    people.find(
-      item =>
-        String(
-          item.id
-        ).trim() ===
-        cleanId
-    );
-
-
   return person || null;
-
 }
 
 
 /* =====================================================
-   REMOVE DUPLICATES IN MEMORY
+   REMOVE DUPLICATES
    ===================================================== */
 
 function deduplicatePeopleByName(
@@ -2043,7 +1580,6 @@ function deduplicatePeopleByName(
 
   const seen =
     new Set();
-
 
   const result = [];
 
@@ -2065,7 +1601,6 @@ function deduplicatePeopleByName(
       );
 
       continue;
-
     }
 
 
@@ -2076,7 +1611,6 @@ function deduplicatePeopleByName(
     ) {
 
       continue;
-
     }
 
 
@@ -2088,12 +1622,10 @@ function deduplicatePeopleByName(
     result.push(
       person
     );
-
   }
 
 
   return result;
-
 }
 
 
@@ -2126,12 +1658,11 @@ function normalizeDigits(
           0x06F0
         )
     );
-
 }
 
 
 /* =====================================================
-   BIRTH
+   GET BIRTH YEAR
    ===================================================== */
 
 function getBirth(
@@ -2162,9 +1693,7 @@ function getBirth(
 
 
   if (labeled) {
-
     return labeled[1];
-
   }
 
 
@@ -2177,67 +1706,6 @@ function getBirth(
   return year
     ? year[1]
     : "";
-
-}
-
-
-/* =====================================================
-   CLEAN MORE
-   ===================================================== */
-
-function cleanMore(
-  more,
-  birth
-) {
-
-  let text =
-    String(
-      more || ""
-    ).trim();
-
-
-  if (!text) {
-    return "";
-  }
-
-
-  if (!birth) {
-    return text;
-  }
-
-
-  text =
-    normalizeDigits(
-      text
-    );
-
-
-  text =
-    text.replace(
-      new RegExp(
-        `(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\\s*لەدایکبوون|ساڵی\\s*لە\\s*دایک\\s*بوون|birth|year\\s*of\\s*birth)[^\\d]{0,50}${birth}`,
-        "i"
-      ),
-      ""
-    );
-
-
-  if (
-    text.trim() === birth
-  ) {
-
-    return "";
-
-  }
-
-
-  return text
-    .replace(
-      /\n{3,}/g,
-      "\n\n"
-    )
-    .trim();
-
 }
 
 
@@ -2275,7 +1743,6 @@ async function sendMainMenu(
       ]
     ]
   );
-
 }
 
 
@@ -2311,7 +1778,6 @@ async function sendMessage(
       })
     }
   );
-
 }
 
 
@@ -2353,7 +1819,6 @@ async function sendMessageWithKeyboard(
       })
     }
   );
-
 }
 
 
@@ -2388,7 +1853,6 @@ async function answerCallback(
       })
     }
   );
-
 }
 
 
@@ -2420,7 +1884,6 @@ async function setMode(
     mode
   )
   .run();
-
 }
 
 
@@ -2453,7 +1916,6 @@ async function getMode(
     row?.mode ||
     "menu"
   );
-
 }
 
 
@@ -2512,12 +1974,11 @@ function normalizeName(
     )
 
     .trim();
-
 }
 
 
 /* =====================================================
-   EXACT NAME PHRASE MATCH
+   NAME MATCH
    ===================================================== */
 
 function exactNamePhraseMatch(
@@ -2541,43 +2002,25 @@ function exactNamePhraseMatch(
     !fullName ||
     !query
   ) {
-
     return false;
-
   }
 
-
-  /*
-     یەکسانی تەواو
-  */
 
   if (
     fullName === query
   ) {
-
     return true;
-
   }
 
-
-  /*
-     ئەگەر بەشێک لە ناوەکە بێت
-  */
 
   if (
     fullName.includes(
       query
     )
   ) {
-
     return true;
-
   }
 
-
-  /*
-     وشە بە وشە بگەڕێ
-  */
 
   const nameWords =
     fullName.split(
@@ -2595,16 +2038,9 @@ function exactNamePhraseMatch(
     queryWords.length >
     nameWords.length
   ) {
-
     return false;
-
   }
 
-
-  /*
-     هەموو وشەکانی گەڕان
-     دەبێت بە ڕیز لە ناوەکەدا بن.
-  */
 
   for (
     let i = 0;
@@ -2625,33 +2061,27 @@ function exactNamePhraseMatch(
     ) {
 
       if (
-        nameWords[i + j]
-          .indexOf(
+        !nameWords[i + j]
+          .startsWith(
             queryWords[j]
-          ) !== 0
+          )
       ) {
 
         matched =
           false;
 
         break;
-
       }
-
     }
 
 
     if (matched) {
-
       return true;
-
     }
-
   }
 
 
   return false;
-
 }
 
 
@@ -2670,5 +2100,4 @@ function normalizePhone(
       /[^\d+]/g,
       ""
     );
-
 }

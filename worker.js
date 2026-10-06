@@ -1125,18 +1125,8 @@ async function searchByName(
 
   for (const person of results) {
 
-    const birth =
-      getBirth(person);
-
-    const name =
-      cleanDisplayName(
-        person.name
-      );
-
     const label =
-      birth
-        ? `${name} — ${birth}`
-        : name;
+      makePersonLabel(person);
 
     buttons.push([
       {
@@ -1164,128 +1154,6 @@ async function searchByName(
     buttons
   );
 
-}
-
-
-/* =====================================================
-   CLEAN DISPLAY NAME
-   ONLY REMOVES THE UNWANTED LABEL
-   ===================================================== */
-
-function cleanDisplayName(name) {
-
-  let value =
-    String(name || "").trim();
-
-  if (!value) {
-    return "بێ ناو";
-  }
-
-  value =
-    value.replace(
-      /(?:^|\s)زانیاری\s*کەسی(?:\s*✅)?(?=\s|$)/g,
-      " "
-    );
-
-  value =
-    value.replace(
-      /(?:^|\s)زانیاری\s*کەسی(?:\s*✔️?|\s*☑️?)?(?=\s|$)/g,
-      " "
-    );
-
-  value =
-    value.replace(
-      /(^|\s)✅(?=\s|$)/g,
-      " "
-    );
-
-  value =
-    value.replace(
-      /\s+/g,
-      " "
-    )
-    .trim();
-
-  return value || "بێ ناو";
-
-}
-
-
-/* =====================================================
-   SHORTEN LONG BUTTON NAME
-   ===================================================== */
-
-function shortenButtonName(
-  name,
-  maxLength = 42
-) {
-
-  const value =
-    String(name || "").trim();
-
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return (
-    value.slice(
-      0,
-      maxLength - 1
-    ).trim() +
-    "…"
-  );
-
-}
-
-
-/* =====================================================
-   EXACT NAME PHRASE MATCH
-   ===================================================== */
-
-function exactNamePhraseMatch(
-  name,
-  search
-) {
-
-  const fullName =
-    normalizeName(name);
-
-  const query =
-    normalizeName(search);
-
-  if (!fullName || !query) {
-    return false;
-  }
-
-  if (fullName === query) {
-    return true;
-  }
-
-  if (
-    fullName.startsWith(
-      query + " "
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    fullName.endsWith(
-      " " + query
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    fullName.includes(
-      " " + query + " "
-    )
-  ) {
-    return true;
-  }
-
-  return false;
 }
 
 
@@ -1343,18 +1211,8 @@ async function searchByPhone(
 
   for (const person of results) {
 
-    const birth =
-      getBirth(person);
-
-    const name =
-      cleanDisplayName(
-        person.name
-      );
-
     const label =
-      birth
-        ? `${name} — ${birth}`
-        : name;
+      makePersonLabel(person);
 
     buttons.push([
       {
@@ -1386,6 +1244,203 @@ async function searchByPhone(
 
 
 /* =====================================================
+   MAKE PERSON LABEL
+   ===================================================== */
+
+function makePersonLabel(person) {
+
+  const name =
+    String(
+      person?.name || "بێ ناو"
+    )
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const age =
+    getAge(person);
+
+  const city =
+    getCity(person);
+
+  const parts = [];
+
+  if (name) {
+    parts.push(name);
+  }
+
+  if (age) {
+    parts.push(`${age} ساڵ`);
+  }
+
+  if (city) {
+    parts.push(city);
+  }
+
+  let label =
+    parts.join(" — ");
+
+  if (!label) {
+    label = "بێ ناو";
+  }
+
+  /*
+     Telegram inline keyboard text
+     نابێت زۆر درێژ بێت.
+     ئەگەر ناوەکە زۆر درێژ بوو،
+     تەنها ناوەکە کورت دەکرێتەوە.
+     تەمەن و شار هەر دەمێنێتەوە.
+  */
+
+  if (label.length <= 64) {
+    return label;
+  }
+
+  const suffixParts = [];
+
+  if (age) {
+    suffixParts.push(`${age} ساڵ`);
+  }
+
+  if (city) {
+    suffixParts.push(city);
+  }
+
+  const suffix =
+    suffixParts.length
+      ? ` — ${suffixParts.join(" — ")}`
+      : "";
+
+  const available =
+    Math.max(
+      5,
+      64 - suffix.length - 1
+    );
+
+  const shortName =
+    name
+      .slice(
+        0,
+        available
+      )
+      .trim();
+
+  return (
+    `${shortName}…${suffix}`
+  );
+
+}
+
+
+/* =====================================================
+   GET AGE
+   ===================================================== */
+
+function getAge(person) {
+
+  const birth =
+    getBirth(person);
+
+  if (!birth) {
+    return "";
+  }
+
+  const birthYear =
+    Number(birth);
+
+  const currentYear =
+    new Date().getFullYear();
+
+  if (
+    !Number.isFinite(birthYear) ||
+    birthYear < 1900 ||
+    birthYear > currentYear
+  ) {
+    return "";
+  }
+
+  const age =
+    currentYear - birthYear;
+
+  if (
+    age < 0 ||
+    age > 130
+  ) {
+    return "";
+  }
+
+  return String(age);
+
+}
+
+
+/* =====================================================
+   GET CITY
+   ===================================================== */
+
+function getCity(person) {
+
+  let text =
+    String(
+      person?.more || ""
+    ).trim();
+
+  if (!text) {
+    return "";
+  }
+
+  text =
+    normalizeDigits(text);
+
+  /*
+     نموونە:
+     شار: هەولێر 👥 هەمووێر
+     شار: کۆیە
+     شار: سلێمانی
+  */
+
+  const match =
+    text.match(
+      /(?:شار|شاری)\s*[:：]\s*([^\n,،|👥📱📅📝🔎🏙️]+)/i
+    );
+
+  if (!match) {
+    return "";
+  }
+
+  let city =
+    String(
+      match[1] || ""
+    ).trim();
+
+  city =
+    city
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .replace(
+        /[.،,;|]+$/g,
+        ""
+      )
+      .trim();
+
+  /*
+     ئەگەر هێمایەکی زیادە لە کۆتایی شارەکەدا هەبوو،
+     لایدەبات.
+  */
+
+  city =
+    city.replace(
+      /[👤👥📱📅📝🔎🏙️]+$/gu,
+      ""
+    ).trim();
+
+  return city;
+
+}
+
+
+/* =====================================================
    SHOW PERSON PREVIEW
    ===================================================== */
 
@@ -1412,18 +1467,16 @@ async function showPersonPreview(
     return;
   }
 
-  const birth =
-    getBirth(person);
+  /*
+     دوای کرتەکردنیش تەنها:
+     ناو — تەمەن — شار
 
-  const name =
-    cleanDisplayName(
-      person.name || "-"
-    );
+     هیچ ژمارەی تەلەفون و
+     زانیاری کەسی پیشان نادرێت.
+  */
 
   const text =
-    birth
-      ? `${name} — ${birth}`
-      : name;
+    makePersonLabel(person);
 
   await sendMessage(
     env.BOT_TOKEN,
@@ -1435,7 +1488,7 @@ async function showPersonPreview(
 
 
 /* =====================================================
-   SHOW PERSON FULL INFO
+   SHOW PERSON
    ===================================================== */
 
 async function showPerson(
@@ -1461,37 +1514,14 @@ async function showPerson(
     return;
   }
 
-  const birth =
-    getBirth(person);
+  /*
+     ئەگەر هەر شوێنێک لە سیستەمەکە
+     person: بانگ بکات،
+     هەر تەنها ناو و تەمەن و شار دەردەخەین.
+  */
 
-  let text =
-    `👤 ناو: ${
-      person.name || "-"
-    }`;
-
-  text +=
-    `\n📅 موالید: ${
-      birth ||
-      "لە داتا نییە"
-    }`;
-
-  text +=
-    `\n📱 تەلەفون: ${
-      person.phone || "-"
-    }`;
-
-  const more =
-    cleanMore(
-      person.more,
-      birth
-    );
-
-  if (more) {
-
-    text +=
-      `\n📝 زانیاری زیاتر: ${more}`;
-
-  }
+  const text =
+    makePersonLabel(person);
 
   await sendMessageWithKeyboard(
     env.BOT_TOKEN,

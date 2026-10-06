@@ -5,7 +5,7 @@ const CORS_HEADERS = {
   "Access-Control-Max-Age": "86400"
 };
 
-const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V9";
+const WORKER_VERSION = "2026-10-06-DATA-ZANYARI-V10";
 
 function response(body, status = 200, headers = {}) {
   return new Response(body, {
@@ -1129,16 +1129,14 @@ async function searchByName(
       getBirth(person);
 
     const name =
-      person.name ||
-      "بێ ناو";
-
-    const shortName =
-      firstThreeNames(name);
+      cleanDisplayName(
+        person.name
+      );
 
     const label =
       birth
-        ? `${shortName} — ${birth}`
-        : `${shortName}`;
+        ? `${name} — ${birth}`
+        : name;
 
     buttons.push([
       {
@@ -1170,17 +1168,45 @@ async function searchByName(
 
 
 /* =====================================================
-   FIRST THREE NAMES
+   CLEAN DISPLAY NAME
+   ONLY REMOVES THE UNWANTED LABEL
    ===================================================== */
 
-function firstThreeNames(name) {
+function cleanDisplayName(name) {
 
-  return String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 3)
-    .join(" ");
+  let value =
+    String(name || "").trim();
+
+  if (!value) {
+    return "بێ ناو";
+  }
+
+  value =
+    value.replace(
+      /(?:^|\s)زانیاری\s*کەسی(?:\s*✅)?(?=\s|$)/g,
+      " "
+    );
+
+  value =
+    value.replace(
+      /(?:^|\s)زانیاری\s*کەسی(?:\s*✔️?|\s*☑️?)?(?=\s|$)/g,
+      " "
+    );
+
+  value =
+    value.replace(
+      /(^|\s)✅(?=\s|$)/g,
+      " "
+    );
+
+  value =
+    value.replace(
+      /\s+/g,
+      " "
+    )
+    .trim();
+
+  return value || "بێ ناو";
 
 }
 
@@ -1321,16 +1347,14 @@ async function searchByPhone(
       getBirth(person);
 
     const name =
-      person.name ||
-      "بێ ناو";
-
-    const shortName =
-      firstThreeNames(name);
+      cleanDisplayName(
+        person.name
+      );
 
     const label =
       birth
-        ? `${shortName} — ${birth}`
-        : `${shortName}`;
+        ? `${name} — ${birth}`
+        : name;
 
     buttons.push([
       {
@@ -1392,14 +1416,14 @@ async function showPersonPreview(
     getBirth(person);
 
   const name =
-    firstThreeNames(
+    cleanDisplayName(
       person.name || "-"
     );
 
   const text =
     birth
       ? `${name} — ${birth}`
-      : `${name}`;
+      : name;
 
   await sendMessage(
     env.BOT_TOKEN,

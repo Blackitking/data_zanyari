@@ -4,1713 +4,392 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>گەڕانی ناوەکان</title>
-
 <style>
 *{box-sizing:border-box}
-
-:root{
-    --bg:#070b17;
-    --card:#111930;
-    --line:rgba(255,255,255,.10);
-    --text:#f7f9ff;
-    --muted:#aab5d1;
-    --purple:#7c5cff;
-    --cyan:#20d9ff;
-    --red:#ff4d6d;
-    --green:#2bd576;
-}
-
-body{
-    margin:0;
-    min-height:100vh;
-    font-family:Arial,"Noto Sans Arabic",sans-serif;
-    color:var(--text);
-    background:
-        radial-gradient(circle at 10% 5%,rgba(124,92,255,.28),transparent 30%),
-        radial-gradient(circle at 90% 15%,rgba(32,217,255,.17),transparent 28%),
-        radial-gradient(circle at 50% 100%,rgba(124,92,255,.12),transparent 38%),
-        var(--bg);
-}
-
-.container{
-    width:min(760px,100%);
-    margin:auto;
-    padding:28px 15px 55px;
-}
-
-.hero{
-    text-align:center;
-    padding:22px 8px 25px;
-}
-
-.logo{
-    width:70px;
-    height:70px;
-    margin:0 auto 15px;
-    border-radius:22px;
-    display:grid;
-    place-items:center;
-    font-size:30px;
-    font-weight:900;
-    background:linear-gradient(135deg,var(--purple),var(--cyan));
-    box-shadow:0 15px 45px rgba(124,92,255,.28);
-}
-
-h1{
-    margin:0;
-    font-size:clamp(32px,8vw,52px);
-    font-weight:900;
-    background:linear-gradient(90deg,#fff,#c9c1ff,#8ceeff);
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-}
-
-.subtitle{
-    color:var(--muted);
-    margin-top:8px;
-    font-size:14px;
-}
-
-.search-card,.admin{
-    background:linear-gradient(145deg,rgba(20,29,56,.92),rgba(9,14,30,.86));
-    border:1px solid var(--line);
-    border-radius:26px;
-    padding:20px;
-    box-shadow:0 25px 70px rgba(0,0,0,.30);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-}
-
-.search-box{
-    display:flex;
-    gap:9px;
-}
-
-input,textarea,button{
-    width:100%;
-    border-radius:15px;
-    padding:14px 16px;
-    font:inherit;
-    font-size:16px;
-    outline:none;
-    transition:.2s;
-}
-
-input,textarea{
-    color:var(--text);
-    background:rgba(255,255,255,.055);
-    border:1px solid var(--line);
-}
-
-input::placeholder,
-textarea::placeholder{
-    color:#7f8bab;
-}
-
-input:focus,
-textarea:focus{
-    border-color:rgba(124,92,255,.8);
-    box-shadow:0 0 0 4px rgba(124,92,255,.12);
-}
-
-.search-box input{
-    flex:1;
-}
-
-button{
-    border:0;
-    color:white;
-    font-weight:800;
-    cursor:pointer;
-    background:linear-gradient(135deg,var(--purple),#597dff);
-    box-shadow:0 9px 25px rgba(124,92,255,.20);
-}
-
-button:hover{
-    filter:brightness(1.08);
-    transform:translateY(-1px);
-}
-
-button:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-    transform:none;
-}
-
-.search-section{
-    margin-bottom:14px;
-}
-
-.phone-section{
-    padding-top:14px;
-    border-top:1px solid var(--line);
-}
-
-.search-label{
-    font-weight:800;
-    color:#dce3fa;
-    margin-bottom:7px;
-}
-
-#results{
-    margin-top:18px;
-}
-
-.person{
-    position:relative;
-    overflow:hidden;
-    background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));
-    border:1px solid var(--line);
-    border-radius:19px;
-    padding:17px;
-    margin-bottom:11px;
-}
-
-.person:before{
-    content:"";
-    position:absolute;
-    right:0;
-    top:0;
-    bottom:0;
-    width:3px;
-    background:linear-gradient(var(--purple),var(--cyan));
-}
-
-.person-name{
-    font-size:20px;
-    font-weight:800;
-}
-
-.phone-data{
-    margin-top:8px;
-    color:#8ceeff;
-    direction:ltr;
-    text-align:right;
-    font-weight:700;
-}
-
-.more-data{
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid var(--line);
-    white-space:pre-wrap;
-    line-height:1.8;
-    color:#dce5ff;
-}
-
-.no-data{
-    margin-top:10px;
-    color:#7f8aa5;
-}
-
-.empty{
-    text-align:center;
-    color:var(--muted);
-    padding:28px 15px;
-    border:1px dashed var(--line);
-    border-radius:18px;
-    margin-top:18px;
-}
-
-.status{
-    margin-top:14px;
-    padding:12px 15px;
-    border-radius:15px;
-    display:none;
-    line-height:1.8;
-    white-space:pre-line;
-}
-
-.status.show{
-    display:block;
-}
-
-.status.info{
-    color:#aeefff;
-    border:1px solid rgba(32,217,255,.25);
-}
-
-.status.error{
-    color:#ff9aae;
-    border:1px solid rgba(255,77,109,.30);
-}
-
-.status.success{
-    color:#8ff0b5;
-    border:1px solid rgba(43,213,118,.30);
-}
-
-.admin-button{
-    display:block;
-    width:min(220px,100%);
-    margin:22px auto 0;
-    background:linear-gradient(135deg,#18213e,#28345c);
-    border:1px solid rgba(124,92,255,.28);
-}
-
-.admin{
-    display:none;
-    margin-top:22px;
-}
-
-.admin h2{
-    margin:0 0 18px;
-    font-size:25px;
-}
-
-.admin-field{
-    margin-bottom:15px;
-}
-
-.admin-field label{
-    display:block;
-    margin-bottom:7px;
-    font-weight:800;
-    color:#dce3fa;
-}
-
-textarea{
-    min-height:120px;
-    resize:vertical;
-}
-
-.admin-list{
-    margin-top:22px;
-}
-
-.admin-item{
-    padding:15px 0;
-    border-bottom:1px solid var(--line);
-}
-
-.admin-name{
-    font-weight:800;
-    font-size:18px;
-}
-
-.admin-phone{
-    margin-top:6px;
-    color:#8ceeff;
-    direction:ltr;
-    text-align:right;
-}
-
-.admin-data{
-    margin-top:7px;
-    color:#aeb9d4;
-    white-space:pre-wrap;
-    line-height:1.7;
-}
-
-.delete{
-    background:linear-gradient(135deg,#a8173d,var(--red));
-    margin-top:10px;
-}
-
-.logout{
-    background:#303b59;
-    margin-top:10px;
-}
-
-/* Telegram Export */
-.telegram-export{
-    margin-top:10px;
-    background:linear-gradient(135deg,#0088cc,#20b8ff);
-    box-shadow:0 12px 30px rgba(32,184,255,.22);
-    font-size:17px;
-}
-
-.telegram-export:hover{
-    filter:brightness(1.08);
-}
-
-.telegram-export:disabled{
-    opacity:.55;
-}
-
-@media(max-width:560px){
-    .container{
-        padding:14px 10px 40px;
-    }
-
-    .search-card,
-    .admin{
-        padding:15px;
-        border-radius:21px;
-    }
-
-    .search-box{
-        flex-direction:column;
-    }
-
-    .hero{
-        padding-top:16px;
-    }
-}
+:root{--bg:#070b17;--card:#111930;--line:rgba(255,255,255,.10);--text:#f7f9ff;--muted:#aab5d1;--purple:#7c5cff;--cyan:#20d9ff;--red:#ff4d6d;--green:#2bd576}
+body{margin:0;min-height:100vh;font-family:Arial,"Noto Sans Arabic",sans-serif;color:var(--text);background:radial-gradient(circle at 10% 5%,rgba(124,92,255,.28),transparent 30%),radial-gradient(circle at 90% 15%,rgba(32,217,255,.17),transparent 28%),radial-gradient(circle at 50% 100%,rgba(124,92,255,.12),transparent 38%),var(--bg)}
+.container{width:min(760px,100%);margin:auto;padding:28px 15px 55px}
+.hero{text-align:center;padding:22px 8px 25px}
+.logo{width:70px;height:70px;margin:0 auto 15px;border-radius:22px;display:grid;place-items:center;font-size:30px;font-weight:900;background:linear-gradient(135deg,var(--purple),var(--cyan));box-shadow:0 15px 45px rgba(124,92,255,.28)}
+h1{margin:0;font-size:clamp(32px,8vw,52px);font-weight:900;background:linear-gradient(90deg,#fff,#c9c1ff,#8ceeff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{color:var(--muted);margin-top:8px;font-size:14px}
+.search-card,.admin{background:linear-gradient(145deg,rgba(20,29,56,.92),rgba(9,14,30,.86));border:1px solid var(--line);border-radius:26px;padding:20px;box-shadow:0 25px 70px rgba(0,0,0,.30);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.search-box{display:flex;gap:9px}
+input,textarea,button{width:100%;border-radius:15px;padding:14px 16px;font:inherit;font-size:16px;outline:none;transition:.2s}
+input,textarea{color:var(--text);background:rgba(255,255,255,.055);border:1px solid var(--line)}
+input::placeholder,textarea::placeholder{color:#7f8bab}
+input:focus,textarea:focus{border-color:rgba(124,92,255,.8);box-shadow:0 0 0 4px rgba(124,92,255,.12)}
+.search-box input{flex:1}
+button{border:0;color:white;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--purple),#597dff);box-shadow:0 9px 25px rgba(124,92,255,.20)}
+button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.search-section{margin-bottom:14px}
+.phone-section{padding-top:14px;border-top:1px solid var(--line)}
+.search-label{font-weight:800;color:#dce3fa;margin-bottom:7px}
+#results{margin-top:18px}
+.person{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));border:1px solid var(--line);border-radius:19px;padding:17px;margin-bottom:11px}
+.person:before{content:"";position:absolute;right:0;top:0;bottom:0;width:3px;background:linear-gradient(var(--purple),var(--cyan))}
+.person-name{font-size:20px;font-weight:800}
+.phone-data{margin-top:8px;color:#8ceeff;direction:ltr;text-align:right;font-weight:700}
+.more-data{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);white-space:pre-wrap;line-height:1.8;color:#dce5ff}
+.no-data{margin-top:10px;color:#7f8aa5}
+.empty{text-align:center;color:var(--muted);padding:28px 15px;border:1px dashed var(--line);border-radius:18px;margin-top:18px}
+.status{margin-top:14px;padding:12px 15px;border-radius:15px;display:none;line-height:1.8;white-space:pre-line}
+.status.show{display:block}
+.status.info{color:#aeefff;border:1px solid rgba(32,217,255,.25)}
+.status.error{color:#ff9aae;border:1px solid rgba(255,77,109,.30)}
+.status.success{color:#8ff0b5;border:1px solid rgba(43,213,118,.30)}
+.admin-button{display:block;width:min(220px,100%);margin:22px auto 0;background:linear-gradient(135deg,#18213e,#28345c);border:1px solid rgba(124,92,255,.28)}
+.admin{display:none;margin-top:22px}
+.admin h2{margin:0 0 18px;font-size:25px}
+.admin-field{margin-bottom:15px}
+.admin-field label{display:block;margin-bottom:7px;font-weight:800;color:#dce3fa}
+textarea{min-height:120px;resize:vertical}
+.admin-list{margin-top:22px}
+.admin-item{padding:15px 0;border-bottom:1px solid var(--line)}
+.admin-name{font-weight:800;font-size:18px}
+.admin-phone{margin-top:6px;color:#8ceeff;direction:ltr;text-align:right}
+.admin-data{margin-top:7px;color:#aeb9d4;white-space:pre-wrap;line-height:1.7}
+.delete{background:linear-gradient(135deg,#a8173d,var(--red));margin-top:10px}
+.logout{background:#303b59;margin-top:10px}
+.telegram-export{margin-top:10px;background:linear-gradient(135deg,#0088cc,#20b8ff);box-shadow:0 12px 30px rgba(32,184,255,.22);font-size:17px}
+.telegram-export:hover{filter:brightness(1.08)}
+.telegram-export:disabled{opacity:.55}
+@media(max-width:560px){.container{padding:14px 10px 40px}.search-card,.admin{padding:15px;border-radius:21px}.search-box{flex-direction:column}.hero{padding-top:16px}}
 </style>
 </head>
-
 <body>
-
 <div class="container">
-
-    <div class="hero">
-        <div class="logo">⌕</div>
-
-        <h1>گەڕانی ناوەکان</h1>
-
-        <div class="subtitle">
-            ناو یان ژمارەی تەلەفون بگەڕێ و ئەنجامەکان ببینە
-        </div>
+  <div class="hero">
+    <div class="logo">⌕</div>
+    <h1>گەڕانی ناوەکان</h1>
+    <div class="subtitle">ناو یان ژمارەی تەلەفون بگەڕێ و ئەنجامەکان ببینە</div>
+  </div>
+  <div class="search-card">
+    <div class="search-section">
+      <div class="search-label">گەڕان بە ناو</div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="تەنها ناو بنووسە..." onkeydown="if(event.key==='Enter') searchNames()">
+        <button id="nameSearchButton" onclick="searchNames()">گەڕان</button>
+      </div>
     </div>
-
-
-    <div class="search-card">
-
-        <div class="search-section">
-
-            <div class="search-label">
-                گەڕان بە ناو
-            </div>
-
-            <div class="search-box">
-
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="تەنها ناو بنووسە..."
-                    onkeydown="if(event.key==='Enter') searchNames()"
-                >
-
-                <button
-                    id="nameSearchButton"
-                    onclick="searchNames()"
-                >
-                    گەڕان
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <div class="search-section phone-section">
-
-            <div class="search-label">
-                گەڕان بە ژمارەی تەلەفون
-            </div>
-
-            <div class="search-box">
-
-                <input
-                    type="tel"
-                    id="phoneSearchInput"
-                    placeholder="تەنها ژمارە بنووسە..."
-                    onkeydown="if(event.key==='Enter') searchPhone()"
-                >
-
-                <button
-                    id="phoneSearchButton"
-                    onclick="searchPhone()"
-                >
-                    گەڕان
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <div id="results" class="empty">
-            بۆ پیشاندانی ناو یان ژمارە، گەڕان بکە.
-        </div>
-
-
-        <div id="status" class="status"></div>
-
+    <div class="search-section phone-section">
+      <div class="search-label">گەڕان بە ژمارەی تەلەفون</div>
+      <div class="search-box">
+        <input type="tel" id="phoneSearchInput" placeholder="تەنها ژمارە بنووسە..." onkeydown="if(event.key==='Enter') searchPhone()">
+        <button id="phoneSearchButton" onclick="searchPhone()">گەڕان</button>
+      </div>
     </div>
-
-
-    <button
-        class="admin-button"
-        onclick="openAdmin()"
-    >
-        Admin Panel
-    </button>
-
-
-    <div
-        id="adminPanel"
-        class="admin"
-    >
-
-        <h2>Admin Panel</h2>
-
-
-        <div class="admin-field">
-
-            <label>
-                ناو
-            </label>
-
-            <input
-                type="text"
-                id="newName"
-                placeholder="ناوی کەسەکە"
-            >
-
-        </div>
-
-
-        <div class="admin-field">
-
-            <label>
-                ژمارەی تەلەفون
-            </label>
-
-            <input
-                type="tel"
-                id="phoneData"
-                placeholder="ژمارەی تەلەفون"
-            >
-
-        </div>
-
-
-        <div class="admin-field">
-
-            <label>
-                داتای زیاتر / پرسیارەکان
-            </label>
-
-            <textarea
-                id="moreData"
-                placeholder="هەر داتا، پرسیار یان زانیارییەک هەیە لێرە بنووسە..."
-            ></textarea>
-
-        </div>
-
-
-        <button onclick="addPerson()">
-            زیادکردن
-        </button>
-
-
-        <!--
-            ئەم دوگمەیە Token ـی Telegram لە HTML ـدا نییە.
-            داتا بۆ Cloudflare Worker دەنێردرێت.
-        -->
-
-        <button
-            id="telegramExportButton"
-            class="telegram-export"
-            onclick="exportToTelegram()"
-        >
-            📤 گواستنەوەی هەموو داتا بۆ Telegram
-        </button>
-
-
-        <button
-            class="logout"
-            onclick="logout()"
-        >
-            دەرچوون
-        </button>
-
-
-        <div
-            id="adminList"
-            class="admin-list"
-        ></div>
-
-    </div>
-
+    <div id="results" class="empty">بۆ پیشاندانی ناو یان ژمارە، گەڕان بکە.</div>
+    <div id="status" class="status"></div>
+  </div>
+  <button class="admin-button" onclick="openAdmin()">Admin Panel</button>
+  <div id="adminPanel" class="admin">
+    <h2>Admin Panel</h2>
+    <div class="admin-field"><label>ناو</label><input type="text" id="newName" placeholder="ناوی کەسەکە"></div>
+    <div class="admin-field"><label>ژمارەی تەلەفون</label><input type="tel" id="phoneData" placeholder="ژمارەی تەلەفون"></div>
+    <div class="admin-field"><label>داتای زیاتر / پرسیارەکان</label><textarea id="moreData" placeholder="هەر داتا، پرسیار یان زانیارییەک هەیە لێرە بنووسە..."></textarea></div>
+    <button onclick="addPerson()">زیادکردن</button>
+    <button id="telegramExportButton" class="telegram-export" onclick="exportToTelegram()">📤 گواستنەوەی هەموو داتا بۆ Telegram</button>
+    <button class="logout" onclick="logout()">دەرچوون</button>
+    <div id="adminList" class="admin-list"></div>
+  </div>
 </div>
 
-
 <script>
-
-/* =====================================================
-   CLOUDFLARE WORKER
-   ===================================================== */
-
-const WORKER_URL =
-    "https://data-zanyari.lawaking24.workers.dev";
-
-
-/* =====================================================
-   LOCAL STORAGE
-   ===================================================== */
+"use strict";
+const WORKER_URL = "https://data-zanyari.lawaking24.workers.dev";
 
 const defaultPeople = [
-    {name:"ئەوین محمد امین",more:""},
-    {name:"اسماعیل محمد",more:""},
-    {name:"ژوان ستار محمد",more:""},
-    {name:"احمد عولا ابراهیم",more:""},
-    {name:"احمد عولا احمد",more:""},
-    {name:"احمد جمیل بریندار",more:""},
-    {name:"احمد جمیل حسین",more:""},
-    {name:"اسماعیل رسول",more:""},
-    {name:"اسماعیل رسول ئەحمەد",more:""},
-    {name:"حسن علی",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی اسماعیل",more:""},
-    {name:"حسن علی بابیر",more:""},
-    {name:"حسن علی تمر",more:""},
-    {name:"حسن علی جمو",more:""}
+ {name:"ئەوین محمد امین",more:""},{name:"اسماعیل محمد",more:""},
+ {name:"ژوان ستار محمد",more:""},{name:"احمد عولا ابراهیم",more:""},
+ {name:"احمد عولا احمد",more:""},{name:"احمد جمیل بریندار",more:""},
+ {name:"احمد جمیل حسین",more:""},{name:"اسماعیل رسول",more:""},
+ {name:"اسماعیل رسول ئەحمەد",more:""},{name:"حسن علی",more:""},
+ {name:"حسن علی احمد",more:""},{name:"حسن علی اسماعیل",more:""},
+ {name:"حسن علی بابیر",more:""},{name:"حسن علی تمر",more:""},
+ {name:"حسن علی جمو",more:""}
 ];
 
-
-function loadLocalPeople(){
-
-    const saved =
-        localStorage.getItem("people");
-
-
-    if(saved !== null){
-
-        try{
-
-            const parsed =
-                JSON.parse(saved);
-
-
-            if(Array.isArray(parsed)){
-
-                return parsed;
-
-            }
-
-        }catch(error){
-
-            console.error(error);
-
-        }
-
+function loadLocalPeople() {
+  try {
+    const saved = localStorage.getItem("people");
+    if (saved !== null) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
     }
-
-
-    return defaultPeople.map(
-        person => ({...person})
-    );
-
+  } catch (error) { console.error("Local data read error:", error); }
+  return defaultPeople.map(person => ({...person}));
+}
+let people = loadLocalPeople();
+function savePeople() {
+  try { localStorage.setItem("people", JSON.stringify(people)); }
+  catch (error) { console.error("Local data save error:", error); }
 }
 
-
-let people =
-    loadLocalPeople();
-
-
-function savePeople(){
-
-    localStorage.setItem(
-        "people",
-        JSON.stringify(people)
-    );
-
+/* Same normalization rules as the Worker, including punctuation. */
+function normalizeName(value) {
+  return String(value ?? "").toLowerCase().normalize("NFKC")
+    .replace(/[ًٌٍَُِّْـ]/g, "")
+    .replace(/[يىئ]/g, "ی").replace(/ك/g, "ک")
+    .replace(/[ۀة]/g, "ە").replace(/ؤ/g, "ۆ")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/[،,؛;|/\\()[\]{}:_"'`.-]/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+function normalizePhone(value) {
+  return String(value ?? "").replace(/[^\d+]/g, "");
 }
 
-
-/* =====================================================
-   NORMALIZE NAME
-   ===================================================== */
-
-function normalizeName(value){
-
-    return String(value || "")
-        .toLowerCase()
-        .normalize("NFKC")
-        .replace(/[ًٌٍَُِّْـ]/g,"")
-        .replace(/[يىئ]/g,"ی")
-        .replace(/ك/g,"ک")
-        .replace(/[ۀة]/g,"ە")
-        .replace(/ؤ/g,"ۆ")
-        .replace(/[أإآ]/g,"ا")
-        .replace(/[،,؛;|/\\()[\]{}:_"'`]/g," ")
-        .replace(/\s+/g," ")
-        .trim();
-
-}
-
-
-/* =====================================================
-   NORMALIZE PHONE
-   ===================================================== */
-
-function normalizePhone(value){
-
-    return String(value || "")
-        .replace(/[^\d+]/g,"");
-
-}
-
-
-/* =====================================================
-   REMOVE DUPLICATES
-   ===================================================== */
-
-function removeDuplicates(list){
-
-    if(!Array.isArray(list)){
-        return [];
+/*
+  STRICT NAME SEARCH:
+  - Matches only person.name, never person.more.
+  - Query words must appear next to each other and in the same order.
+  - No partial-word matching.
+  Examples: "محمد احمد" won't match "زینە محمد" or "سەیوان عزیز".
+*/
+function nameMatches(person, input) {
+  const nameWords = normalizeName(person?.name).split(/\s+/).filter(Boolean);
+  const queryWords = normalizeName(input).split(/\s+/).filter(Boolean);
+  if (!nameWords.length || !queryWords.length || queryWords.length > nameWords.length) return false;
+  for (let start = 0; start <= nameWords.length - queryWords.length; start++) {
+    let match = true;
+    for (let i = 0; i < queryWords.length; i++) {
+      if (nameWords[start + i] !== queryWords[i]) { match = false; break; }
     }
+    if (match) return true;
+  }
+  return false;
+}
 
+/* Preserve every record; don't collapse records merely because names match. */
+function removeDuplicates(list) {
+  return Array.isArray(list) ? list : [];
+}
 
-    const seen =
-        new Set();
+function showResults(found) {
+  const results = document.getElementById("results");
+  results.replaceChildren();
+  if (!Array.isArray(found) || found.length === 0) {
+    results.className = "empty";
+    results.textContent = "هیچ تۆمارێک نەدۆزرایەوە.";
+    return;
+  }
+  results.className = "";
+  found.forEach(person => {
+    const div = document.createElement("div");
+    div.className = "person";
+    const name = document.createElement("div");
+    name.className = "person-name";
+    name.textContent = person?.name || "";
+    div.appendChild(name);
+    if (person?.phone) {
+      const phone = document.createElement("div");
+      phone.className = "phone-data";
+      phone.textContent = "📞 " + String(person.phone);
+      div.appendChild(phone);
+    }
+    const more = document.createElement("div");
+    if (person?.more !== undefined && person?.more !== null && String(person.more).trim()) {
+      more.className = "more-data";
+      more.textContent = String(person.more);
+    } else {
+      more.className = "no-data";
+      more.textContent = "داتای زیاتر نەدۆزرایەوە";
+    }
+    div.appendChild(more);
+    results.appendChild(div);
+  });
+}
 
+function showStatus(message, type) {
+  const status = document.getElementById("status");
+  status.className = "status show " + type;
+  status.textContent = message;
+}
+function hideStatus() {
+  const status = document.getElementById("status");
+  status.className = "status";
+  status.textContent = "";
+}
 
-    return list.filter(person => {
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, options);
+  let data = null;
+  try { data = await response.json(); } catch (_) {}
+  if (!response.ok) throw new Error(data?.error || data?.message || ("HTTP " + response.status));
+  return data;
+}
 
-        const name =
-            normalizeName(person?.name);
+async function searchNames() {
+  const input = normalizeName(document.getElementById("searchInput").value);
+  if (!input) {
+    showResults([]);
+    hideStatus();
+    return;
+  }
+  const button = document.getElementById("nameSearchButton");
+  button.disabled = true;
+  button.textContent = "دەگەڕێت...";
+  showStatus("🔎 لە Cloud ـدا بەدوای ناوەکە دەگەڕێین...", "info");
+  try {
+    const data = await fetchJSON(WORKER_URL + "/api/search/name?q=" + encodeURIComponent(input));
+    let found = data?.people || data?.results || data;
+    if (!Array.isArray(found)) found = [];
+    found = found.filter(person => nameMatches(person, input));
+    showResults(found);
+    showStatus(found.length ? "✅ " + found.length + " تۆمار دۆزرایەوە." : "هیچ تۆمارێک بەم ناوە نەدۆزرایەوە.", found.length ? "success" : "info");
+  } catch (error) {
+    console.error("Name search error:", error);
+    const localFound = people.filter(person => nameMatches(person, input));
+    showResults(localFound);
+    showStatus(localFound.length
+      ? "⚠️ Cloud بەردەست نەبوو؛ تەنها داتای ناوخۆی مۆبایل پیشان درا."
+      : "❌ Cloud بەردەست نەبوو و لە داتای ناوخۆشدا ئەم ناوە نەدۆزرایەوە.\n" + error.message,
+      localFound.length ? "info" : "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "گەڕان";
+  }
+}
 
-        const phone =
-            normalizePhone(person?.phone);
+async function searchPhone() {
+  const input = normalizePhone(document.getElementById("phoneSearchInput").value);
+  if (!input) {
+    showResults([]);
+    hideStatus();
+    return;
+  }
+  const button = document.getElementById("phoneSearchButton");
+  button.disabled = true;
+  button.textContent = "دەگەڕێت...";
+  showStatus("📞 لە Cloud ـدا بەدوای ژمارەکە دەگەڕێین...", "info");
+  try {
+    const data = await fetchJSON(WORKER_URL + "/api/search/phone?q=" + encodeURIComponent(input));
+    let found = data?.people || data?.results || data;
+    if (!Array.isArray(found)) found = [];
+    found = found.filter(person => normalizePhone(person?.phone).includes(input));
+    showResults(found);
+    showStatus(found.length ? "✅ " + found.length + " تۆمار دۆزرایەوە." : "هیچ تۆمارێک بەم ژمارەیە نەدۆزرایەوە.", found.length ? "success" : "info");
+  } catch (error) {
+    console.error("Phone search error:", error);
+    const localFound = people.filter(person => normalizePhone(person?.phone).includes(input));
+    showResults(localFound);
+    showStatus(localFound.length
+      ? "⚠️ Cloud بەردەست نەبوو؛ تەنها داتای ناوخۆی مۆبایل پیشان درا."
+      : "❌ Cloud بەردەست نەبوو و لە داتای ناوخۆشدا ئەم ژمارەیە نەدۆزرایەوە.\n" + error.message,
+      localFound.length ? "info" : "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "گەڕان";
+  }
+}
 
-        const more =
-            normalizeName(person?.more);
+/* Admin code is still client-side, so it is not secure for sensitive data. */
+function openAdmin() {
+  const code = prompt("کۆدی Admin بنووسە:");
+  if (code !== "5624") { alert("کۆدی Admin هەڵەیە."); return; }
+  document.getElementById("adminPanel").style.display = "block";
+  loadAdmin();
+}
 
+/* Local-only additions. These do NOT write to the Cloudflare D1 database. */
+function addPerson() {
+  const nameInput = document.getElementById("newName");
+  const phoneInput = document.getElementById("phoneData");
+  const moreInput = document.getElementById("moreData");
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
+  const more = moreInput.value.trim();
+  if (!name && !phone) { alert("تکایە ناو یان ژمارەی تەلەفون بنووسە."); return; }
 
-        const key =
-            name +
-            "||" +
-            phone +
-            "||" +
-            more;
+  /* Allow different people to share the same name/phone; don't reject on name alone. */
+  people.push({id: (globalThis.crypto?.randomUUID?.() || (Date.now() + "-" + Math.random().toString(16).slice(2))), name, phone, more});
+  savePeople();
+  nameInput.value = "";
+  phoneInput.value = "";
+  moreInput.value = "";
+  loadAdmin();
+  alert("✅ تۆمارەکە تەنها لە مۆبایلەکەت زیادکرا. بۆ زیادکردنی Cloud پێویستە Worker ـی تایبەت چاک بکرێت.");
+}
 
+function loadAdmin() {
+  const list = document.getElementById("adminList");
+  list.replaceChildren();
+  people.forEach((person, index) => {
+    const item = document.createElement("div");
+    item.className = "admin-item";
+    const name = document.createElement("div");
+    name.className = "admin-name";
+    name.textContent = person?.name || "";
+    item.appendChild(name);
+    if (person?.phone) {
+      const phone = document.createElement("div");
+      phone.className = "admin-phone";
+      phone.textContent = "📞 " + String(person.phone);
+      item.appendChild(phone);
+    }
+    const data = document.createElement("div");
+    data.className = "admin-data";
+    data.textContent = person?.more ? String(person.more) : "داتای زیاتر نییە";
+    item.appendChild(data);
+    const del = document.createElement("button");
+    del.className = "delete";
+    del.textContent = "سڕینەوە";
+    del.onclick = () => deletePerson(index);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+function deletePerson(index) {
+  if (!confirm("دڵنیایت لە سڕینەوەی ئەم تۆمارە؟ ئەمە تەنها لە مۆبایلەکەت دەیسڕێتەوە.")) return;
+  people.splice(index, 1);
+  savePeople();
+  loadAdmin();
+}
+function logout() {
+  document.getElementById("adminPanel").style.display = "none";
+}
 
-        if(seen.has(key)){
-            return false;
-        }
-
-
-        seen.add(key);
-
-        return true;
-
+/*
+  Telegram export:
+  Current Worker requires X-Import-Key. Never put that secret in this public HTML.
+  This request intentionally reports the real authorization error rather than exposing a secret.
+  A secure admin-only Worker endpoint/auth flow is needed to enable export.
+*/
+async function exportToTelegram() {
+  const button = document.getElementById("telegramExportButton");
+  let currentPeople;
+  try {
+    const stored = localStorage.getItem("people");
+    currentPeople = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(currentPeople)) currentPeople = [];
+  } catch (error) {
+    showStatus("❌ نەتوانرا داتاکانی مۆبایل بخوێندرێنەوە.", "error");
+    return;
+  }
+  if (!currentPeople.length) {
+    showStatus("⚠️ هیچ داتایەکی ناوخۆی مۆبایل بۆ ناردن نییە.", "info");
+    return;
+  }
+  if (!confirm("دڵنیایت کە " + currentPeople.length + " تۆماری ناوخۆی مۆبایل بۆ Telegram بنێردرێت؟")) return;
+  button.disabled = true;
+  button.textContent = "📤 دەنێردرێت...";
+  showStatus("📤 داواکاری ناردن دەنێردرێت...", "info");
+  try {
+    const result = await fetchJSON(WORKER_URL + "/api/telegram/export", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({people: currentPeople})
     });
-
+    showStatus("✅ داواکاری تەواو بوو: " + JSON.stringify(result), "success");
+  } catch (error) {
+    showStatus("❌ ناردن سەرکەوتوو نەبوو. Worker ـەکە پێویستی بە ڕێگایەکی پارێزراوی Admin هەیە.\n" + error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "📤 گواستنەوەی هەموو داتا بۆ Telegram";
+  }
 }
-
-
-/* =====================================================
-   SHOW RESULTS
-   ===================================================== */
-
-function showResults(found){
-
-    found =
-        removeDuplicates(found);
-
-
-    const results =
-        document.getElementById("results");
-
-
-    if(!found || found.length === 0){
-
-        results.innerHTML =
-            '<div class="empty">هیچ تۆمارێک نەدۆزرایەوە.</div>';
-
-        return;
-
-    }
-
-
-    results.innerHTML = "";
-
-
-    found.forEach(person => {
-
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "person";
-
-
-        const name =
-            document.createElement("div");
-
-        name.className =
-            "person-name";
-
-        name.textContent =
-            person.name || "";
-
-        div.appendChild(name);
-
-
-        if(person.phone){
-
-            const phone =
-                document.createElement("div");
-
-            phone.className =
-                "phone-data";
-
-            phone.textContent =
-                "📞 " +
-                String(person.phone);
-
-            div.appendChild(phone);
-
-        }
-
-
-        const more =
-            document.createElement("div");
-
-
-        if(
-            person.more !== undefined &&
-            person.more !== null &&
-            String(person.more).trim()
-        ){
-
-            more.className =
-                "more-data";
-
-            more.textContent =
-                String(person.more);
-
-        }else{
-
-            more.className =
-                "no-data";
-
-            more.textContent =
-                "داتای زیاتر نەدۆزرایەوە";
-
-        }
-
-
-        div.appendChild(more);
-
-        results.appendChild(div);
-
-    });
-
-}
-
-
-/* =====================================================
-   STATUS
-   ===================================================== */
-
-function showStatus(message,type){
-
-    const status =
-        document.getElementById("status");
-
-
-    status.className =
-        "status show " + type;
-
-
-    status.textContent =
-        message;
-
-}
-
-
-function hideStatus(){
-
-    const status =
-        document.getElementById("status");
-
-
-    status.className =
-        "status";
-
-
-    status.textContent =
-        "";
-
-}
-
-
-/* =====================================================
-   NAME MATCH
-   ===================================================== */
-
-function nameMatches(person,input){
-
-    const name =
-        normalizeName(person?.name);
-
-    const more =
-        normalizeName(person?.more);
-
-
-    if(!name){
-        return false;
-    }
-
-
-    const words =
-        input
-            .split(/\s+/)
-            .filter(Boolean);
-
-
-    if(name.includes(input)){
-        return true;
-    }
-
-
-    const nameWords =
-        name
-            .split(/\s+/)
-            .filter(Boolean);
-
-
-    if(
-        words.length &&
-        words.every(word =>
-            nameWords.some(nameWord =>
-                nameWord.includes(word)
-            )
-        )
-    ){
-
-        return true;
-
-    }
-
-
-    if(more.includes(input)){
-        return true;
-    }
-
-
-    if(
-        words.length &&
-        words.every(word =>
-            more.includes(word)
-        )
-    ){
-
-        return true;
-
-    }
-
-
-    return false;
-
-}
-
-
-/* =====================================================
-   SEARCH NAME
-   ===================================================== */
-
-async function searchNames(){
-
-    const input =
-        normalizeName(
-            document.getElementById("searchInput").value
-        );
-
-
-    if(!input){
-
-        document.getElementById("results").innerHTML =
-            '<div class="empty">بۆ پیشاندانی ناو، گەڕان بکە.</div>';
-
-        hideStatus();
-
-        return;
-
-    }
-
-
-    const button =
-        document.getElementById("nameSearchButton");
-
-
-    button.disabled = true;
-    button.textContent = "دەگەڕێت...";
-
-
-    showStatus(
-        "🔎 لە Cloud ـدا بەدوای ناوەکە دەگەڕێین...",
-        "info"
-    );
-
-
-    try{
-
-        const url =
-            WORKER_URL +
-            "/api/search/name?q=" +
-            encodeURIComponent(input);
-
-
-        const response =
-            await fetch(url);
-
-
-        let data = null;
-
-
-        try{
-            data = await response.json();
-        }catch(error){
-            data = null;
-        }
-
-
-        if(!response.ok){
-
-            throw new Error(
-                data?.error ||
-                data?.message ||
-                "HTTP " + response.status
-            );
-
-        }
-
-
-        let found =
-            data?.people ||
-            data?.results ||
-            data;
-
-
-        if(!Array.isArray(found)){
-            found = [];
-        }
-
-
-        found =
-            found.filter(person =>
-                nameMatches(person,input)
-            );
-
-
-        found =
-            removeDuplicates(found);
-
-
-        showResults(found);
-
-
-        if(found.length){
-
-            showStatus(
-                "✅ " + found.length + " تۆمار دۆزرایەوە.",
-                "success"
-            );
-
-        }else{
-
-            showStatus(
-                "هیچ تۆمارێک بەم ناوە نەدۆزرایەوە.",
-                "info"
-            );
-
-        }
-
-
-    }catch(error){
-
-        console.error(error);
-
-
-        let localFound =
-            people.filter(person =>
-                nameMatches(person,input)
-            );
-
-
-        localFound =
-            removeDuplicates(localFound);
-
-
-        if(localFound.length){
-
-            showResults(localFound);
-
-            showStatus(
-                "⚠️ Cloud بەردەست نەبوو؛ داتا لە مۆبایلەکە پیشان درا.",
-                "info"
-            );
-
-        }else{
-
-            showResults([]);
-
-            showStatus(
-                "❌ نەتوانرا Cloud پەیوەندی پێوە بکرێت.\n" +
-                error.message,
-                "error"
-            );
-
-        }
-
-    }finally{
-
-        button.disabled = false;
-        button.textContent = "گەڕان";
-
-    }
-
-}
-
-
-/* =====================================================
-   SEARCH PHONE
-   ===================================================== */
-
-async function searchPhone(){
-
-    const input =
-        normalizePhone(
-            document.getElementById("phoneSearchInput").value
-        );
-
-
-    if(!input){
-
-        document.getElementById("results").innerHTML =
-            '<div class="empty">ژمارەی تەلەفون بنووسە.</div>';
-
-        hideStatus();
-
-        return;
-
-    }
-
-
-    const button =
-        document.getElementById("phoneSearchButton");
-
-
-    button.disabled = true;
-    button.textContent = "دەگەڕێت...";
-
-
-    showStatus(
-        "📞 لە Cloud ـدا بەدوای ژمارەکە دەگەڕێین...",
-        "info"
-    );
-
-
-    try{
-
-        const url =
-            WORKER_URL +
-            "/api/search/phone?q=" +
-            encodeURIComponent(input);
-
-
-        const response =
-            await fetch(url);
-
-
-        let data = null;
-
-
-        try{
-            data = await response.json();
-        }catch(error){
-            data = null;
-        }
-
-
-        if(!response.ok){
-
-            throw new Error(
-                data?.error ||
-                data?.message ||
-                "HTTP " + response.status
-            );
-
-        }
-
-
-        let found =
-            data?.people ||
-            data?.results ||
-            data;
-
-
-        if(!Array.isArray(found)){
-            found = [];
-        }
-
-
-        found =
-            found.filter(person => {
-
-                const phone =
-                    normalizePhone(person?.phone);
-
-                return phone.includes(input);
-
-            });
-
-
-        found =
-            removeDuplicates(found);
-
-
-        showResults(found);
-
-
-        if(found.length){
-
-            showStatus(
-                "✅ " + found.length + " تۆمار دۆزرایەوە.",
-                "success"
-            );
-
-        }else{
-
-            showStatus(
-                "هیچ تۆمارێک بەم ژمارەیە نەدۆزرایەوە.",
-                "info"
-            );
-
-        }
-
-
-    }catch(error){
-
-        console.error(error);
-
-
-        let found =
-            people.filter(person => {
-
-                const phone =
-                    normalizePhone(person?.phone);
-
-                return phone.includes(input);
-
-            });
-
-
-        found =
-            removeDuplicates(found);
-
-
-        showResults(found);
-
-
-        if(found.length){
-
-            showStatus(
-                "⚠️ Cloud بەردەست نەبوو؛ داتا لە مۆبایلەکە پیشان درا.",
-                "info"
-            );
-
-        }else{
-
-            showStatus(
-                "هیچ تۆمارێک نەدۆزرایەوە.",
-                "info"
-            );
-
-        }
-
-    }finally{
-
-        button.disabled = false;
-        button.textContent = "گەڕان";
-
-    }
-
-}
-
-
-/* =====================================================
-   ADMIN
-   ===================================================== */
-
-function openAdmin(){
-
-    const code =
-        prompt("کۆدی Admin بنووسە:");
-
-
-    if(code !== "5624"){
-
-        alert("کۆدی Admin هەڵەیە.");
-
-        return;
-
-    }
-
-
-    document
-        .getElementById("adminPanel")
-        .style.display = "block";
-
-
-    loadAdmin();
-
-}
-
-
-/* =====================================================
-   ADD PERSON
-   ===================================================== */
-
-function addPerson(){
-
-    const nameInput =
-        document.getElementById("newName");
-
-    const phoneInput =
-        document.getElementById("phoneData");
-
-    const moreInput =
-        document.getElementById("moreData");
-
-
-    const name =
-        nameInput.value.trim();
-
-    const phone =
-        phoneInput.value.trim();
-
-    const more =
-        moreInput.value.trim();
-
-
-    if(!name && !phone){
-
-        alert(
-            "تکایە ناو یان ژمارەی تەلەفون بنووسە."
-        );
-
-        return;
-
-    }
-
-
-    const normalizedNewName =
-        normalizeName(name);
-
-
-    if(normalizedNewName){
-
-        const duplicateName =
-            people.some(person =>
-                normalizeName(person.name) ===
-                normalizedNewName
-            );
-
-
-        if(duplicateName){
-
-            alert(
-                "ببورە، ئەم ناوە دوبارەیە."
-            );
-
-            return;
-
-        }
-
-    }
-
-
-    const normalizedNewPhone =
-        normalizePhone(phone);
-
-
-    if(normalizedNewPhone){
-
-        const duplicatePhone =
-            people.some(person =>
-                normalizePhone(person.phone) ===
-                normalizedNewPhone
-            );
-
-
-        if(duplicatePhone){
-
-            alert(
-                "ببورە، ئەم ژمارەی تەلەفونە دوبارەیە."
-            );
-
-            return;
-
-        }
-
-    }
-
-
-    people.push({
-        name:name,
-        phone:phone,
-        more:more
-    });
-
-
-    savePeople();
-
-
-    nameInput.value = "";
-    phoneInput.value = "";
-    moreInput.value = "";
-
-
-    loadAdmin();
-
-
-    alert(
-        "✅ تۆمارەکە زیادکرا."
-    );
-
-}
-
-
-/* =====================================================
-   ADMIN LIST
-   ===================================================== */
-
-function loadAdmin(){
-
-    const list =
-        document.getElementById("adminList");
-
-
-    list.innerHTML = "";
-
-
-    people.forEach((person,index) => {
-
-        const item =
-            document.createElement("div");
-
-        item.className =
-            "admin-item";
-
-
-        const name =
-            document.createElement("div");
-
-        name.className =
-            "admin-name";
-
-        name.textContent =
-            person.name || "";
-
-        item.appendChild(name);
-
-
-        if(person.phone){
-
-            const phone =
-                document.createElement("div");
-
-            phone.className =
-                "admin-phone";
-
-            phone.textContent =
-                "📞 " + String(person.phone);
-
-            item.appendChild(phone);
-
-        }
-
-
-        const data =
-            document.createElement("div");
-
-        data.className =
-            "admin-data";
-
-
-        if(
-            person.more !== undefined &&
-            person.more !== null &&
-            String(person.more).trim()
-        ){
-
-            data.textContent =
-                String(person.more);
-
-        }else{
-
-            data.textContent =
-                "داتای زیاتر نییە";
-
-        }
-
-
-        item.appendChild(data);
-
-
-        const del =
-            document.createElement("button");
-
-        del.className =
-            "delete";
-
-        del.textContent =
-            "سڕینەوە";
-
-
-        del.onclick =
-            function(){
-                deletePerson(index);
-            };
-
-
-        item.appendChild(del);
-
-        list.appendChild(item);
-
-    });
-
-}
-
-
-/* =====================================================
-   DELETE
-   ===================================================== */
-
-function deletePerson(index){
-
-    if(
-        !confirm(
-            "دڵنیایت لە سڕینەوەی ئەم تۆمارە؟"
-        )
-    ){
-
-        return;
-
-    }
-
-
-    people.splice(index,1);
-
-    savePeople();
-
-    loadAdmin();
-
-}
-
-
-/* =====================================================
-   TELEGRAM EXPORT
-   =====================================================
-
-   گرنگ:
-   هیچ BOT TOKEN ـێک لێرە نییە.
-
-   HTML تەنها داتا دەداتە Worker.
-
-   Worker دەبێت:
-       POST /api/telegram/export
-   پشتگیری بکات.
-
-   BOT_TOKEN و CHAT_ID دەبێت تەنها
-   لە Cloudflare Worker ـدا هەڵبگیرێن.
-   ===================================================== */
-
-async function exportToTelegram(){
-
-    const button =
-        document.getElementById(
-            "telegramExportButton"
-        );
-
-
-    /*
-       داتا لە هەمان localStorage ـەوە وەردەگیرێت.
-       هیچ clear یان removeItem بەکار ناهێنرێت.
-    */
-
-    let currentPeople = [];
-
-
-    try{
-
-        const stored =
-            localStorage.getItem("people");
-
-
-        if(stored){
-
-            const parsed =
-                JSON.parse(stored);
-
-
-            if(Array.isArray(parsed)){
-
-                currentPeople =
-                    parsed;
-
-            }
-
-        }
-
-    }catch(error){
-
-        console.error(error);
-
-
-        showStatus(
-            "❌ نەتوانرا داتاکانی localStorage بخوێندرێنەوە.",
-            "error"
-        );
-
-        return;
-
-    }
-
-
-    if(!currentPeople.length){
-
-        showStatus(
-            "⚠️ هیچ داتایەک بۆ ناردن نییە.",
-            "info"
-        );
-
-        return;
-
-    }
-
-
-    const confirmed =
-        confirm(
-            "دڵنیایت کە " +
-            currentPeople.length +
-            " تۆمار بۆ Telegram بنێردرێت؟"
-        );
-
-
-    if(!confirmed){
-
-        return;
-
-    }
-
-
-    button.disabled = true;
-
-    button.textContent =
-        "📤 دەنێردرێت...";
-
-
-    showStatus(
-        "📤 تکایە چاوەڕێ بکە، هەموو داتاکان بۆ Telegram دەنێردرێن...",
-        "info"
-    );
-
-
-    try{
-
-        /*
-           داتا بە شێوەیەکی ڕاستەوخۆ بۆ Worker دەنێردرێت.
-
-           Worker خۆی:
-           - BOT_TOKEN
-           - CHAT_ID
-
-           لە Environment Variables / Secrets وەردەگرێت.
-        */
-
-        const response =
-            await fetch(
-                WORKER_URL +
-                "/api/telegram/export",
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:JSON.stringify({
-
-                        people:currentPeople
-
-                    })
-                }
-            );
-
-
-        let result = null;
-
-
-        try{
-
-            result =
-                await response.json();
-
-        }catch(error){
-
-            result = null;
-
-        }
-
-
-        if(!response.ok){
-
-            throw new Error(
-                result?.error ||
-                result?.message ||
-                "HTTP " +
-                response.status
-            );
-
-        }
-
-
-        showStatus(
-            "✅ هەموو داتاکان بە سەرکەوتوویی بۆ Telegram نێردران.",
-            "success"
-        );
-
-
-    }catch(error){
-
-        console.error(
-            "Telegram export error:",
-            error
-        );
-
-
-        showStatus(
-            "❌ ناردنی داتا بۆ Telegram سەرکەوتوو نەبوو.\n" +
-            error.message,
-            "error"
-        );
-
-    }finally{
-
-        button.disabled = false;
-
-        button.textContent =
-            "📤 گواستنەوەی هەموو داتا بۆ Telegram";
-
-    }
-
-}
-
-
-/* =====================================================
-   LOGOUT
-   ===================================================== */
-
-function logout(){
-
-    document
-        .getElementById("adminPanel")
-        .style.display = "none";
-
-}
-
 </script>
-
 </body>
 </html>

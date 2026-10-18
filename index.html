@@ -368,7 +368,19 @@ textarea{
             >
             <button onclick="searchPhone()">گەڕان</button>
         </div>
-        <div class="search-label">کارەبا</div>
+    </div>
+
+    <div class="search-section phone-section electricity-section">
+        <div class="search-label">گەڕان بە کارەبا</div>
+        <div class="search-box">
+            <input
+                type="text"
+                id="electricitySearchInput"
+                placeholder="زانیاری کارەبا بنووسە..."
+                onkeydown="if(event.key==='Enter') searchElectricity()"
+            >
+            <button onclick="searchElectricity()">گەڕان</button>
+        </div>
     </div>
 
     <div id="results" class="empty">
@@ -401,6 +413,14 @@ textarea{
             id="phoneData"
             placeholder="ژمارەی تەلەفون"
         >
+    </div>
+
+    <div class="admin-field">
+        <label>کارەبا</label>
+        <textarea
+            id="electricityData"
+            placeholder="زانیاری کارەبا لێرە بنووسە..."
+        ></textarea>
     </div>
 
     <div class="admin-field">
@@ -563,6 +583,12 @@ function showResults(found){
 
         }
 
+        if(person.electricity){
+            const electricity = document.createElement("div");
+            electricity.className = "more-data";
+            electricity.textContent = "⚡ کارەبا: " + String(person.electricity);
+            div.appendChild(electricity);
+        }
 
         const more =
             document.createElement("div");
@@ -679,6 +705,24 @@ function searchPhone(){
 }
 
 
+/* گەڕان بە کارەبا */
+function searchElectricity(){
+    const input = normalizeName(document.getElementById("electricitySearchInput").value);
+
+    if(!input){
+        document.getElementById("results").innerHTML =
+            '<div class="empty">زانیاری کارەبا بنووسە.</div>';
+        return;
+    }
+
+    const found = people.filter(person =>
+        normalizeName(person.electricity).includes(input)
+    );
+
+    showResults(found);
+}
+
+
 /* کردنەوەی Admin */
 function openAdmin(){
 
@@ -716,6 +760,11 @@ function addPerson(){
     const moreInput =
         document.getElementById("moreData");
 
+    const electricityInput =
+        document.getElementById("electricityData");
+
+    const electricity =
+        electricityInput.value.trim();
 
     const name =
         nameInput.value.trim();
@@ -727,9 +776,9 @@ function addPerson(){
         moreInput.value.trim();
 
 
-    if(!name && !phone){
+    if(!name && !phone && !electricity){
 
-        alert("تکایە ناو یان ژمارەی تەلەفون بنووسە.");
+        alert("تکایە ناو یان ژمارەی تەلەفون یان زانیاری کارەبا بنووسە.");
 
         return;
     }
@@ -772,7 +821,9 @@ function addPerson(){
 
         phone:phone,
 
-        more:more
+        more:more,
+
+        electricity:electricity
 
     });
 
@@ -785,6 +836,8 @@ function addPerson(){
     phoneInput.value = "";
 
     moreInput.value = "";
+
+    electricityInput.value = "";
 
 
     loadAdmin();
@@ -841,6 +894,12 @@ function loadAdmin(){
 
         }
 
+        if(person.electricity){
+            const electricity = document.createElement("div");
+            electricity.className = "admin-data";
+            electricity.textContent = "⚡ کارەبا: " + String(person.electricity);
+            item.appendChild(electricity);
+        }
 
         const data =
             document.createElement("div");

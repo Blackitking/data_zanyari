@@ -6,12 +6,12 @@ const CORS_HEADERS = {
   "Vary": "Origin"
 };
 
-const WORKER_VERSION = "2026-10-19-DATA-ZANYARI-V14-ELECTRICITY";
-const SEARCH_BATCH_SIZE = 1000;
-const MAX_SEARCH_ROWS = 50000;
-const MAX_RESULTS = 50;
+const WORKER_VERSION = "2026-10-19-DATA-ZANYARI-V16-FLEXIBLE-SEARCH-1M";
 
-/* RESPONSE HELPERS */
+// سنووری گەڕان: یەک ملیۆن تۆمار
+const SEARCH_BATCH_SIZE = 5000;
+const MAX_SEARCH_ROWS = 1000000;
+const MAX_RESULTS = 50;
 
 function response(body, status = 200, headers = {}) {
   return new Response(body, {
@@ -26,8 +26,6 @@ function json(data, status = 200) {
   });
 }
 
-/* MAIN WORKER */
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -37,35 +35,17 @@ export default {
     }
 
     try {
-      if (!env.DB) {
-        throw new Error("D1 binding DB is missing");
-      }
-
-      /*
-       * Add electricity column when missing.
-       * Existing people records are preserved.
-       */
-      if (url.pathname !== "/" || request.method !== "GET") {
-        await ensurePeopleSchema(env);
-      }
-
       if (url.pathname === "/" && request.method === "GET") {
         return response(
           `Data Zanyari Worker is running.\nVersion: ${WORKER_VERSION}`
         );
       }
 
-      if (
-        url.pathname === "/api/search/name" &&
-        request.method === "GET"
-      ) {
+      if (url.pathname === "/api/search/name" && request.method === "GET") {
         return await searchNameAPI(request, env);
       }
 
-      if (
-        url.pathname === "/api/search/phone" &&
-        request.method === "GET"
-      ) {
+      if (url.pathname === "/api/search/phone" && request.method === "GET") {
         return await searchPhoneAPI(request, env);
       }
 
@@ -76,17 +56,11 @@ export default {
         return await searchElectricityAPI(request, env);
       }
 
-      if (
-        url.pathname === "/api/import" &&
-        request.method === "POST"
-      ) {
+      if (url.pathname === "/api/import" && request.method === "POST") {
         return await importPeople(request, env);
       }
 
-      if (
-        url.pathname === "/api/deduplicate" &&
-        request.method === "POST"
-      ) {
+      if (url.pathname === "/api/deduplicate" && request.method === "POST") {
         return await deduplicateAPI(request, env);
       }
 
@@ -109,58 +83,78 @@ export default {
 
     } catch (error) {
       console.error("WORKER ERROR:", error);
-
-      return json({
-        ok: false,
-        error: "Internal server error"
-      }, 500);
+      return json(
+        { ok: false, error: "Internal server error" },
+        500
+      );
     }
   }
 };
 
-/* DATABASE SCHEMA */
+
+// ==================================================
+// پشکنینی داتابەیس و زیادکردنی ستوونی کارەبا ئەگەر پێویست بوو
+// هیچ تۆمارێک ناسڕدرێتەوە
+// ==================================================
 
 async function ensurePeopleSchema(env) {
-  const columns = await env.DB
+  if (!env.DB) {
+    throw new Error("D1 binding DB is missing");
+  }
+
+  const info = await env.DB
     .prepare("PRAGMA table_info(people)")
     .all();
 
-  const rows = columns.results || [];
+  const columns = info.results || [];
 
-  if (!rows.length) {
-    throw new Error(
-      "Table people does not exist. Existing database was not modified."
-    );
+  if (!columns.length) {
+    throw new Error("D1 table people does not exist");
   }
 
-  const hasElectricity = rows.some(
-    column => column.name === "electricity"
-  );
+  if (!columns.some(c => c.name === "electricity")) {
+    try {
+      await env.DB.prepare(
+        "ALTER TABLE people ADD COLUMN electricity TEXT NOT NULL DEFAULT ''"
+      ).run();
 
-  if (!hasElectricity) {
-    await env.DB.prepare(
-      "ALTER TABLE people ADD COLUMN electricity TEXT NOT NULL DEFAULT ''"
-    ).run();
+    } catch (error) {
+      const again = await env.DB
+        .prepare("PRAGMA table_info(people)")
+        .all();
+
+      if (!(again.results || []).some(c => c.name === "electricity")) {
+        throw error;
+      }
+    }
   }
 }
 
-/* SEARCH BY NAME */
+
+// ==================================================
+// گەڕان بە ناو
+// ==================================================
 
 async function searchNameAPI(request, env) {
   try {
-    const query = normalizeName(
+    await ensurePeopleSchema(env);
+
+    const q = normalizeName(
       new URL(request.url).searchParams.get("q") || ""
     );
 
-    if (!query) {
-      return json({ ok: true, people: [], count: 0 });
+    if (!q) {
+      return json({
+        ok: true,
+        people: [],
+        count: 0
+      });
     }
 
-    const people = await getAllPeopleForSearch(env);
-
-    const results = deduplicateExactRecords(
-      people.filter(p => exactNamePhraseMatch(p.name, query))
-    ).slice(0, MAX_RESULTS);
+    const results = await searchPeopleInD1(
+      env,
+      person => flexibleNameMatch(person.name, q)
+    );
 
     return json({
       ok: true,
@@ -178,25 +172,31 @@ async function searchNameAPI(request, env) {
   }
 }
 
-/* SEARCH BY PHONE */
+
+// ==================================================
+// گەڕان بە ژمارەی تەلەفون
+// ==================================================
 
 async function searchPhoneAPI(request, env) {
   try {
-    const query = normalizePhone(
+    await ensurePeopleSchema(env);
+
+    const q = normalizePhone(
       new URL(request.url).searchParams.get("q") || ""
     );
 
-    if (!query) {
-      return json({ ok: true, people: [], count: 0 });
+    if (!q) {
+      return json({
+        ok: true,
+        people: [],
+        count: 0
+      });
     }
 
-    const people = await getAllPeopleForSearch(env);
-
-    const results = deduplicateExactRecords(
-      people.filter(p =>
-        normalizePhone(p.phone).includes(query)
-      )
-    ).slice(0, MAX_RESULTS);
+    const results = await searchPeopleInD1(
+      env,
+      person => normalizePhone(person.phone).includes(q)
+    );
 
     return json({
       ok: true,
@@ -214,25 +214,32 @@ async function searchPhoneAPI(request, env) {
   }
 }
 
-/* SEARCH BY ELECTRICITY */
+
+// ==================================================
+// گەڕان بە زانیاریی کارەبا
+// ==================================================
 
 async function searchElectricityAPI(request, env) {
   try {
-    const query = normalizeSearchText(
+    await ensurePeopleSchema(env);
+
+    const q = normalizeSearchText(
       new URL(request.url).searchParams.get("q") || ""
     );
 
-    if (!query) {
-      return json({ ok: true, people: [], count: 0 });
+    if (!q) {
+      return json({
+        ok: true,
+        people: [],
+        count: 0
+      });
     }
 
-    const people = await getAllPeopleForSearch(env);
-
-    const results = deduplicateExactRecords(
-      people.filter(p =>
-        normalizeSearchText(p.electricity).includes(query)
-      )
-    ).slice(0, MAX_RESULTS);
+    const results = await searchPeopleInD1(
+      env,
+      person =>
+        normalizeSearchText(person.electricity || "").includes(q)
+    );
 
     return json({
       ok: true,
@@ -250,49 +257,80 @@ async function searchElectricityAPI(request, env) {
   }
 }
 
-/* LOAD DATABASE RECORDS */
 
-async function getAllPeopleForSearch(env) {
-  const all = [];
+// ==================================================
+// گەڕانی بەش بە بەش تا یەک ملیۆن تۆمار
+// بۆ ئەوەی هەموو داتا لە یەکجاردا نەخرێتە ناو بیرگە
+// ==================================================
+
+async function searchPeopleInD1(env, matcher) {
+  if (!env.DB) {
+    throw new Error("D1 binding DB is missing");
+  }
+
+  const found = [];
+  const seen = new Set();
 
   for (
     let offset = 0;
-    offset < MAX_SEARCH_ROWS;
+    offset < MAX_SEARCH_ROWS && found.length < MAX_RESULTS;
     offset += SEARCH_BATCH_SIZE
   ) {
     const result = await env.DB.prepare(
-      `SELECT id, name, phone, more, electricity
+      `SELECT id, name, phone, electricity, more
        FROM people
        ORDER BY rowid ASC
        LIMIT ? OFFSET ?`
-    ).bind(SEARCH_BATCH_SIZE, offset).all();
+    )
+      .bind(SEARCH_BATCH_SIZE, offset)
+      .all();
 
     const rows = result.results || [];
 
-    all.push(...rows);
+    for (const person of rows) {
+      if (!matcher(person)) {
+        continue;
+      }
+
+      const key = person?.id != null
+        ? `id:${String(person.id)}`
+        : `record:${normalizeName(person?.name)}|${normalizePhone(person?.phone)}|${normalizeSearchText(person?.electricity || "")}|${String(person?.more || "").trim()}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        found.push(person);
+      }
+
+      if (found.length >= MAX_RESULTS) {
+        break;
+      }
+    }
 
     if (rows.length < SEARCH_BATCH_SIZE) {
       break;
     }
   }
 
-  return all;
+  return found;
 }
 
-/* SAFE IMPORT
- * New IDs are inserted.
- * Existing IDs are not overwritten.
- * Electricity can be updated independently when provided.
- */
+
+// ==================================================
+// گواستنەوەی داتا بۆ D1
+// تۆماری نوێ زیاد دەکات و تۆماری کۆن ناسڕێتەوە
+// ==================================================
 
 async function importPeople(request, env) {
-  const key = request.headers.get("X-Import-Key");
-
-  if (!env.IMPORT_KEY || key !== env.IMPORT_KEY) {
+  if (
+    !env.IMPORT_KEY ||
+    request.headers.get("X-Import-Key") !== env.IMPORT_KEY
+  ) {
     return response("Unauthorized", 401);
   }
 
   try {
+    await ensurePeopleSchema(env);
+
     const body = await request.json();
 
     if (!Array.isArray(body.people)) {
@@ -307,55 +345,54 @@ async function importPeople(request, env) {
     let electricityUpdated = 0;
 
     for (let i = 0; i < body.people.length; i += 50) {
-      const chunk = body.people.slice(i, i + 50);
+      const chunk = body.people.slice(i, i + 50).map(person => ({
+        id: String(person?.id || crypto.randomUUID()),
+        name: String(person?.name || ""),
+        phone: String(person?.phone || ""),
+        electricity: String(person?.electricity || ""),
+        more: String(person?.more || "")
+      }));
 
-      for (const p of chunk) {
-        const id = String(p?.id || crypto.randomUUID());
-        const name = String(p?.name || "");
-        const phone = String(p?.phone || "");
-        const more = String(p?.more || "");
-        const electricity = String(p?.electricity || "");
+      for (const person of chunk) {
+        const result = await env.DB.prepare(
+          `INSERT OR IGNORE INTO people
+           (id, name, phone, electricity, more)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+          .bind(
+            person.id,
+            person.name,
+            person.phone,
+            person.electricity,
+            person.more
+          )
+          .run();
 
-        const existing = await env.DB.prepare(
-          "SELECT id FROM people WHERE id = ? LIMIT 1"
-        ).bind(id).first();
+        if (Number(result?.meta?.changes || 0) > 0) {
+          imported++;
 
-        if (existing) {
+        } else {
           skipped++;
 
-          /*
-           * Update electricity only.
-           * Preserve existing name, phone and more.
-           */
-          if (electricity.trim()) {
+          if (person.electricity.trim()) {
             const update = await env.DB.prepare(
               `UPDATE people
                SET electricity = ?
                WHERE id = ?
-                 AND COALESCE(electricity, '') != ?`
-            ).bind(electricity, id, electricity).run();
+               AND COALESCE(electricity, '') <> ?`
+            )
+              .bind(
+                person.electricity,
+                person.id,
+                person.electricity
+              )
+              .run();
 
             electricityUpdated += Number(
               update?.meta?.changes || 0
             );
           }
-
-          continue;
         }
-
-        await env.DB.prepare(
-          `INSERT INTO people
-           (id, name, phone, more, electricity)
-           VALUES (?, ?, ?, ?, ?)`
-        ).bind(
-          id,
-          name,
-          phone,
-          more,
-          electricity
-        ).run();
-
-        imported++;
       }
     }
 
@@ -377,20 +414,25 @@ async function importPeople(request, env) {
   }
 }
 
-/* SAFE DUPLICATE CHECK
- * This endpoint never deletes anything.
- */
+
+// ==================================================
+// پشکنینی تۆمارە دووبارەکان
+// تەنها پشکنینە؛ هیچ تۆمارێک ناسڕێتەوە
+// ==================================================
 
 async function deduplicateAPI(request, env) {
-  const key = request.headers.get("X-Import-Key");
-
-  if (!env.IMPORT_KEY || key !== env.IMPORT_KEY) {
+  if (
+    !env.IMPORT_KEY ||
+    request.headers.get("X-Import-Key") !== env.IMPORT_KEY
+  ) {
     return response("Unauthorized", 401);
   }
 
   try {
+    await ensurePeopleSchema(env);
+
     const result = await env.DB.prepare(
-      `SELECT id, name, phone, more, electricity
+      `SELECT id, name, phone, electricity, more
        FROM people
        ORDER BY rowid ASC`
     ).all();
@@ -398,13 +440,12 @@ async function deduplicateAPI(request, env) {
     const seen = new Set();
     let repeatedExactRecords = 0;
 
-    for (const p of result.results || []) {
-      const key = [
-        normalizeName(p.name),
-        normalizePhone(p.phone),
-        String(p.more || "").trim(),
-        normalizeSearchText(p.electricity)
-      ].join("|");
+    for (const person of result.results || []) {
+      const key =
+        `${normalizeName(person.name)}|` +
+        `${normalizePhone(person.phone)}|` +
+        `${normalizeName(person.electricity || "")}|` +
+        `${String(person.more || "").trim()}`;
 
       if (seen.has(key)) {
         repeatedExactRecords++;
@@ -435,7 +476,10 @@ async function deduplicateAPI(request, env) {
   }
 }
 
-/* TELEGRAM EXPORT */
+
+// ==================================================
+// ناردنی داتا بۆ تێلێگرام
+// ==================================================
 
 async function telegramExport(request, env) {
   try {
@@ -466,17 +510,17 @@ async function telegramExport(request, env) {
       `گەڕانی ناوەکان - Export\n` +
       `کۆی تۆمارەکان: ${body.people.length}\n\n`;
 
-    body.people.forEach((p, i) => {
+    body.people.forEach((person, index) => {
       text +=
         `========================\n` +
-        `#${i + 1}\n` +
-        `ناو: ${p?.name || "-"}\n` +
-        `ژمارەی تەلەفون: ${p?.phone || "-"}\n` +
-        `زانیاری زیاتر: ${p?.more || "-"}\n` +
-        `کارەبا: ${p?.electricity || "-"}\n`;
+        `#${index + 1}\n` +
+        `ناو: ${person?.name || "-"}\n` +
+        `ژمارەی تەلەفون: ${person?.phone || "-"}\n` +
+        `کارەبا: ${person?.electricity || "-"}\n` +
+        `زانیاری زیاتر: ${person?.more || "-"}\n`;
 
-      if (p?.id != null) {
-        text += `ID: ${p.id}\n`;
+      if (person?.id != null) {
+        text += `ID: ${person.id}\n`;
       }
 
       text += "\n";
@@ -493,9 +537,10 @@ async function telegramExport(request, env) {
 
     form.append(
       "document",
-      new Blob([text], {
-        type: "text/plain;charset=utf-8"
-      }),
+      new Blob(
+        [text],
+        { type: "text/plain;charset=utf-8" }
+      ),
       "people-export.txt"
     );
 
@@ -534,16 +579,23 @@ async function telegramExport(request, env) {
   }
 }
 
-/* TELEGRAM BOT */
+
+// ==================================================
+// بۆتی تێلێگرام
+// ==================================================
 
 async function handleTelegram(update, env) {
+  await ensurePeopleSchema(env);
+
   if (update.callback_query) {
     return handleCallback(update.callback_query, env);
   }
 
   const message = update.message;
 
-  if (!message?.text) return;
+  if (!message?.text) {
+    return;
+  }
 
   const chatId = message.chat.id;
   const text = message.text.trim();
@@ -606,12 +658,13 @@ async function handleTelegram(update, env) {
   return searchByName(env, chatId, text);
 }
 
-/* TELEGRAM BUTTON CALLBACKS */
 
 async function handleCallback(query, env) {
   const chatId = query.message?.chat?.id;
 
-  if (!chatId) return;
+  if (!chatId) {
+    return;
+  }
 
   const data = query.data || "";
 
@@ -620,538 +673,15 @@ async function handleCallback(query, env) {
     data === "search_phone" ||
     data === "search_electricity"
   ) {
-    let mode;
-    let prompt;
-
-    if (data === "search_name") {
-      mode = "name";
-      prompt = "👤 تکایە ناوی کەسەکە بنووسە:";
-    } else if (data === "search_phone") {
-      mode = "phone";
-      prompt = "📱 تکایە ژمارەی تەلەفون بنووسە:";
-    } else {
-      mode = "electricity";
-      prompt = "⚡ تکایە ژمارە یان زانیاری کارەباکە بنووسە:";
-    }
+    const mode =
+      data === "search_name"
+        ? "name"
+        : data === "search_phone"
+          ? "phone"
+          : "electricity";
 
     await setMode(env, chatId, mode);
     await answerCallback(env.BOT_TOKEN, query.id);
 
-    return sendMessage(env.BOT_TOKEN, chatId, prompt);
-  }
-
-  if (data === "main_menu") {
-    await setMode(env, chatId, "menu");
-    await answerCallback(env.BOT_TOKEN, query.id);
-
-    return sendMainMenu(env.BOT_TOKEN, chatId);
-  }
-
-  if (data.startsWith("preview:")) {
-    await answerCallback(env.BOT_TOKEN, query.id);
-
-    return showPersonPreview(
-      env,
-      chatId,
-      data.slice(8)
-    );
-  }
-}
-
-/* TELEGRAM NAME SEARCH */
-
-async function searchByName(env, chatId, text) {
-  const query = normalizeName(text);
-
-  if (!query) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "👤 تکایە ناوێک بنووسە."
-    );
-  }
-
-  const people = await getAllPeopleForSearch(env);
-
-  const results = deduplicateExactRecords(
-    people.filter(p => exactNamePhraseMatch(p.name, query))
-  ).slice(0, MAX_RESULTS);
-
-  if (!results.length) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      `❌ ئەم ناوە نەدۆزرایەوە.\n\n🔎 «${text}»`
-    );
-  }
-
-  const buttons = results.map(p => [{
-    text: makePersonLabel(p),
-    callback_data: `preview:${String(p.id)}`.slice(0, 64)
-  }]);
-
-  buttons.push([
-    { text: "⬅️ گەڕانەوە", callback_data: "main_menu" }
-  ]);
-
-  return sendMessageWithKeyboard(
-    env.BOT_TOKEN,
-    chatId,
-    `🔎 ${results.length} ئەنجام دۆزرایەوە.`,
-    buttons
-  );
-}
-
-/* TELEGRAM PHONE SEARCH */
-
-async function searchByPhone(env, chatId, text) {
-  const query = normalizePhone(text);
-
-  if (!query) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "📱 تکایە ژمارەی تەلەفون بنووسە."
-    );
-  }
-
-  const people = await getAllPeopleForSearch(env);
-
-  const results = deduplicateExactRecords(
-    people.filter(p =>
-      normalizePhone(p.phone).includes(query)
-    )
-  ).slice(0, MAX_RESULTS);
-
-  if (!results.length) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "❌ هیچ کەسێک بەو ژمارەیە نەدۆزرایەوە."
-    );
-  }
-
-  const buttons = results.map(p => [{
-    text: makePersonLabel(p),
-    callback_data: `preview:${String(p.id)}`.slice(0, 64)
-  }]);
-
-  buttons.push([
-    { text: "⬅️ گەڕانەوە", callback_data: "main_menu" }
-  ]);
-
-  return sendMessageWithKeyboard(
-    env.BOT_TOKEN,
-    chatId,
-    `📱 ${results.length} ئەنجام دۆزرایەوە.`,
-    buttons
-  );
-}
-
-/* TELEGRAM ELECTRICITY SEARCH */
-
-async function searchByElectricity(env, chatId, text) {
-  const query = normalizeSearchText(text);
-
-  if (!query) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "⚡ تکایە ژمارە یان زانیاری کارەباکە بنووسە."
-    );
-  }
-
-  const people = await getAllPeopleForSearch(env);
-
-  const results = deduplicateExactRecords(
-    people.filter(p =>
-      normalizeSearchText(p.electricity).includes(query)
-    )
-  ).slice(0, MAX_RESULTS);
-
-  if (!results.length) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      `❌ هیچ تۆمارێک بۆ ئەم زانیارییەی کارەبا نەدۆزرایەوە.\n\n⚡ «${text}»`
-    );
-  }
-
-  const buttons = results.map(p => [{
-    text: makePersonLabel(p),
-    callback_data: `preview:${String(p.id)}`.slice(0, 64)
-  }]);
-
-  buttons.push([
-    { text: "⬅️ گەڕانەوە", callback_data: "main_menu" }
-  ]);
-
-  return sendMessageWithKeyboard(
-    env.BOT_TOKEN,
-    chatId,
-    `⚡ ${results.length} ئەنجامی گەڕانی کارەبا دۆزرایەوە.`,
-    buttons
-  );
-}
-
-/* PERSON LABEL */
-
-function makePersonLabel(p) {
-  const name = String(p?.name || "بێ ناو")
-    .trim()
-    .replace(/\s+/g, " ");
-
-  const city = getCity(p);
-  const age = getAge(p);
-
-  const suffix = [city, age ? `${age} ساڵ` : ""]
-    .filter(Boolean)
-    .join(" — ");
-
-  const full = [name, suffix]
-    .filter(Boolean)
-    .join(" — ");
-
-  if (full.length <= 64) return full;
-
-  const ending = suffix ? ` — ${suffix}` : "";
-
-  return `${name.slice(
-    0,
-    Math.max(5, 61 - ending.length)
-  ).trim()}…${ending}`.slice(0, 64);
-}
-
-/* AGE */
-
-function getAge(p) {
-  const birth = getBirth(p);
-  const year = Number(birth);
-  const now = new Date().getFullYear();
-
-  return (
-    birth &&
-    Number.isFinite(year) &&
-    year >= 1900 &&
-    year <= now &&
-    now - year <= 130
-  ) ? String(now - year) : "";
-}
-
-/* CITY */
-
-function getCity(p) {
-  const text = normalizeDigits(
-    String(p?.more || "").trim()
-  );
-
-  if (!text) return "";
-
-  const patterns = [
-    /(?:^|\n)\s*(?:شار|شاری)\s*[:：=-]?\s*([^\n|,،;]+)/iu,
-    /(?:^|\n)\s*(?:city|city\s*name)\s*[:：=-]?\s*([^\n|,،;]+)/iu,
-    /(?:^|\n)\s*(?:مدينة|المحافظة|محافظة)\s*[:：=-]?\s*([^\n|,،;]+)/iu
-  ];
-
-  for (const re of patterns) {
-    const match = text.match(re);
-
-    if (match?.[1]) {
-      return match[1]
-        .trim()
-        .replace(/[.،,;|]+$/g, "")
-        .replace(/\s+/g, " ");
-    }
-  }
-
-  return "";
-}
-
-/* PERSON PREVIEW */
-
-async function showPersonPreview(env, chatId, id) {
-  const p = await getPerson(env, id);
-
-  if (!p) {
-    return sendMessage(
-      env.BOT_TOKEN,
-      chatId,
-      "❌ داتا نەدۆزرایەوە."
-    );
-  }
-
-  return sendMessage(
-    env.BOT_TOKEN,
-    chatId,
-    `👤 ناو: ${p.name || "نییە"}\n\n` +
-    `📱 ژمارەی تەلەفون: ${p.phone || "نییە"}\n\n` +
-    `⚡ زانیاری کارەبا: ${p.electricity || "نییە"}\n\n` +
-    `📋 هەموو زانیارییەکان:\n${p.more || "هیچ زانیارییەکی زیادە نییە."}`
-  );
-}
-
-async function getPerson(env, id) {
-  return env.DB.prepare(
-    `SELECT id, name, phone, more, electricity
-     FROM people
-     WHERE id = ?
-     LIMIT 1`
-  ).bind(String(id || "").trim()).first();
-}
-
-/* DEDUPLICATE RESULTS ONLY
- * Never merge different people with the same name.
- */
-
-function deduplicateExactRecords(people) {
-  const seen = new Set();
-  const out = [];
-
-  for (const p of people || []) {
-    const key = p?.id != null
-      ? `id:${String(p.id)}`
-      : `record:${normalizeName(p?.name)}|${normalizePhone(p?.phone)}|${String(p?.more || "").trim()}|${normalizeSearchText(p?.electricity)}`;
-
-    if (seen.has(key)) continue;
-
-    seen.add(key);
-    out.push(p);
-  }
-
-  return out;
-}
-
-/* NORMALIZE DIGITS */
-
-function normalizeDigits(value) {
-  return String(value || "")
-    .replace(/[٠-٩]/g, d =>
-      String(d.charCodeAt(0) - 0x0660)
-    )
-    .replace(/[۰-۹]/g, d =>
-      String(d.charCodeAt(0) - 0x06F0)
-    );
-}
-
-/* BIRTH YEAR */
-
-function getBirth(p) {
-  const more = normalizeDigits(
-    String(p?.more || "")
-  );
-
-  if (!more.trim()) return "";
-
-  const labeled = more.match(
-    /(?:موالید|موڵید|میلاد|لەدایکبوون|لەدایک‌بوون|ساڵی\s*لەدایکبوون|ساڵی\s*لە\s*دایک\s*بوون|birth|year\s*of\s*birth)[^\d]{0,50}((?:18|19|20)\d{2})/i
-  );
-
-  if (labeled) return labeled[1];
-
-  const year = more.match(
-    /(?:^|[^\d])((?:18|19|20)\d{2})(?:$|[^\d])/m
-  );
-
-  return year ? year[1] : "";
-}
-
-/* NORMALIZE NAME */
-
-function normalizeName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFKC")
-    .replace(/[ًٌٍَُِّْـ]/g, "")
-    .replace(/[يىئ]/g, "ی")
-    .replace(/ك/g, "ک")
-    .replace(/[ۀة]/g, "ە")
-    .replace(/ؤ/g, "ۆ")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/[،,؛;|/\\()[\]{}:_"'`.-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/* NORMALIZE SEARCH TEXT */
-
-function normalizeSearchText(value) {
-  return normalizeDigits(String(value || ""))
-    .toLowerCase()
-    .normalize("NFKC")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/* EXACT NAME PHRASE MATCH */
-
-function exactNamePhraseMatch(name, search) {
-  const full = normalizeName(name);
-  const query = normalizeName(search);
-
-  if (!full || !query) return false;
-
-  const nameWords = full.split(/\s+/);
-  const queryWords = query.split(/\s+/);
-
-  if (queryWords.length > nameWords.length) {
-    return false;
-  }
-
-  for (
-    let start = 0;
-    start <= nameWords.length - queryWords.length;
-    start++
-  ) {
-    let match = true;
-
-    for (let i = 0; i < queryWords.length; i++) {
-      if (nameWords[start + i] !== queryWords[i]) {
-        match = false;
-        break;
-      }
-    }
-
-    if (match) return true;
-  }
-
-  return false;
-}
-
-/* NORMALIZE PHONE */
-
-function normalizePhone(value) {
-  return normalizeDigits(value)
-    .replace(/[^\d+]/g, "");
-}
-
-/* MAIN TELEGRAM MENU */
-
-async function sendMainMenu(token, chatId) {
-  return sendMessageWithKeyboard(
-    token,
-    chatId,
-    "بەخێربێیت 👋\n\nتکایە دانەیەکیان هەڵبژێرە:",
-    [
-      [
-        {
-          text: "👤 گەڕان بە ناو",
-          callback_data: "search_name"
-        }
-      ],
-      [
-        {
-          text: "📱 ژمارەی تەلەفون",
-          callback_data: "search_phone"
-        }
-      ],
-      [
-        {
-          text: "⚡ گەڕان بە کارەبا",
-          callback_data: "search_electricity"
-        }
-      ]
-    ]
-  );
-}
-
-/* SEND TELEGRAM MESSAGE */
-
-async function sendMessage(token, chatId, text) {
-  return fetch(
-    `https://api.telegram.org/bot${token}/sendMessage`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: String(text).slice(0, 4000)
-      })
-    }
-  );
-}
-
-/* SEND TELEGRAM MESSAGE WITH BUTTONS */
-
-async function sendMessageWithKeyboard(
-  token,
-  chatId,
-  text,
-  keyboard
-) {
-  return fetch(
-    `https://api.telegram.org/bot${token}/sendMessage`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: String(text).slice(0, 4000),
-        reply_markup: {
-          inline_keyboard: keyboard
-        }
-      })
-    }
-  );
-}
-
-/* ANSWER TELEGRAM CALLBACK */
-
-async function answerCallback(
-  token,
-  callbackId,
-  text = ""
-) {
-  return fetch(
-    `https://api.telegram.org/bot${token}/answerCallbackQuery`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        callback_query_id: callbackId,
-        text,
-        show_alert: false
-      })
-    }
-  );
-}
-
-/* SAVE TELEGRAM SEARCH MODE */
-
-async function setMode(env, chatId, mode) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS bot_sessions (
-      chat_id TEXT PRIMARY KEY,
-      mode TEXT NOT NULL DEFAULT 'menu'
-    )`
-  ).run();
-
-  await env.DB.prepare(
-    `INSERT INTO bot_sessions (chat_id, mode)
-     VALUES (?, ?)
-     ON CONFLICT(chat_id)
-     DO UPDATE SET mode = excluded.mode`
-  ).bind(String(chatId), mode).run();
-}
-
-/* GET TELEGRAM SEARCH MODE */
-
-async function getMode(env, chatId) {
-  await env.DB.prepare(
-    `CREATE TABLE IF NOT EXISTS bot_sessions (
-      chat_id TEXT PRIMARY KEY,
-      mode TEXT NOT NULL DEFAULT 'menu'
-    )`
-  ).run();
-
-  const row = await env.DB.prepare(
-    "SELECT mode FROM bot_sessions WHERE chat_id = ?"
-  ).bind(String(chatId)).first();
-
-  return row?.mode || "menu";
-}
+    const prompts = {
+      name: "👤 تکایە ناوی کەسە

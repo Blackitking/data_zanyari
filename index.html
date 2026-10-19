@@ -1,1215 +1,266 @@
 <!DOCTYPE html>
-<html lang="ku">
+<html lang="ku" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>گەڕانی ناوەکان</title>
-
 <style>
 *{box-sizing:border-box}
-
-:root{
-    --bg:#070b17;
-    --card:#111930;
-    --card2:#182442;
-    --line:rgba(255,255,255,.10);
-    --text:#f7f9ff;
-    --muted:#aab5d1;
-    --purple:#7c5cff;
-    --cyan:#20d9ff;
-    --red:#ff4d6d;
-    --green:#2bd576;
-}
-
-body{
-    margin:0;
-    min-height:100vh;
-    font-family:Arial,"Noto Sans Arabic",sans-serif;
-    color:var(--text);
-    background:
-        radial-gradient(circle at 10% 5%,rgba(124,92,255,.28),transparent 30%),
-        radial-gradient(circle at 90% 15%,rgba(32,217,255,.17),transparent 28%),
-        radial-gradient(circle at 50% 100%,rgba(124,92,255,.12),transparent 38%),
-        var(--bg);
-}
-
-.container{
-    width:min(760px,100%);
-    margin:auto;
-    padding:28px 15px 55px;
-}
-
-.hero{
-    text-align:center;
-    padding:22px 8px 25px;
-}
-
-.logo{
-    width:70px;
-    height:70px;
-    margin:0 auto 15px;
-    border-radius:22px;
-    display:grid;
-    place-items:center;
-    font-size:30px;
-    font-weight:900;
-    background:linear-gradient(135deg,var(--purple),var(--cyan));
-    box-shadow:0 15px 45px rgba(124,92,255,.28);
-}
-
-h1{
-    margin:0;
-    font-size:clamp(32px,8vw,52px);
-    font-weight:900;
-    background:linear-gradient(90deg,#fff,#c9c1ff,#8ceeff);
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-}
-
-.subtitle{
-    color:var(--muted);
-    margin-top:8px;
-    font-size:14px;
-}
-
-.search-card,.admin{
-    background:linear-gradient(145deg,rgba(20,29,56,.92),rgba(9,14,30,.86));
-    border:1px solid var(--line);
-    border-radius:26px;
-    padding:20px;
-    box-shadow:0 25px 70px rgba(0,0,0,.30);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-}
-
-.search-box{
-    display:flex;
-    gap:9px;
-}
-
-input,textarea,button{
-    width:100%;
-    border-radius:15px;
-    padding:14px 16px;
-    font:inherit;
-    font-size:16px;
-    outline:none;
-    transition:.2s;
-}
-
-input,textarea{
-    color:var(--text);
-    background:rgba(255,255,255,.055);
-    border:1px solid var(--line);
-}
-
-input::placeholder,textarea::placeholder{
-    color:#7f8bab;
-}
-
-input:focus,textarea:focus{
-    border-color:rgba(124,92,255,.8);
-    box-shadow:0 0 0 4px rgba(124,92,255,.12);
-}
-
-.search-box input{
-    flex:1;
-}
-
-button{
-    border:0;
-    color:white;
-    font-weight:800;
-    cursor:pointer;
-    background:linear-gradient(135deg,var(--purple),#597dff);
-    box-shadow:0 9px 25px rgba(124,92,255,.20);
-}
-
-button:hover{
-    filter:brightness(1.08);
-    transform:translateY(-1px);
-}
-
-button:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-    transform:none;
-    filter:none;
-}
-
-.search-section{margin-bottom:14px}
-.search-section:last-child{margin-bottom:0}
-.search-label{font-weight:800;color:#dce3fa;margin-bottom:7px}
-.phone-section{padding-top:14px;border-top:1px solid var(--line)}
-
-#results{
-    margin-top:18px;
-}
-
-.person{
-    position:relative;
-    overflow:hidden;
-    background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));
-    border:1px solid var(--line);
-    border-radius:19px;
-    padding:17px;
-    margin-bottom:11px;
-}
-
-.person:before{
-    content:"";
-    position:absolute;
-    right:0;
-    top:0;
-    bottom:0;
-    width:3px;
-    background:linear-gradient(var(--purple),var(--cyan));
-}
-
-.person-name{
-    font-size:20px;
-    font-weight:800;
-    padding-right:5px;
-}
-
-.phone-data{
-    margin-top:8px;
-    color:#8ceeff;
-    direction:ltr;
-    text-align:right;
-    font-weight:700;
-}
-
-.more-data{
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid var(--line);
-    white-space:pre-wrap;
-    line-height:1.8;
-    color:#dce5ff;
-}
-
-.no-data{
-    margin-top:10px;
-    color:#7f8aa5;
-}
-
-.empty{
-    text-align:center;
-    color:var(--muted);
-    padding:28px 15px;
-    border:1px dashed var(--line);
-    border-radius:18px;
-    margin-top:18px;
-}
-
-.admin-button{
-    display:block;
-    width:min(220px,100%);
-    margin:22px auto 0;
-    background:linear-gradient(135deg,#18213e,#28345c);
-    border:1px solid rgba(124,92,255,.28);
-}
-
-.admin{
-    display:none;
-    margin-top:22px;
-}
-
-.admin h2{
-    margin:0 0 18px;
-    font-size:25px;
-}
-
-.admin-field{
-    margin-bottom:15px;
-}
-
-.admin-field label{
-    display:block;
-    margin-bottom:7px;
-    font-weight:800;
-    color:#dce3fa;
-}
-
-textarea{
-    min-height:120px;
-    resize:vertical;
-}
-
-.admin-list{
-    margin-top:22px;
-}
-
-.admin-item{
-    padding:15px 0;
-    border-bottom:1px solid var(--line);
-}
-
-.admin-name{
-    font-weight:800;
-    font-size:18px;
-}
-
-.admin-phone{
-    margin-top:6px;
-    color:#8ceeff;
-    direction:ltr;
-    text-align:right;
-}
-
-.admin-data{
-    margin-top:7px;
-    color:#aeb9d4;
-    white-space:pre-wrap;
-    line-height:1.7;
-}
-
-.delete{
-    background:linear-gradient(135deg,#a8173d,var(--red));
-    margin-top:10px;
-}
-
-.logout{
-    background:#303b59;
-    margin-top:10px;
-}
-
-.cloud-button{
-    display:block;
-    width:min(300px,100%);
-    margin:12px auto 0;
-    background:linear-gradient(135deg,#087f9f,#20bfe0);
-}
-
-.cloud-status{
-    display:none;
-    margin-top:14px;
-    padding:13px 15px;
-    border-radius:15px;
-    background:rgba(255,255,255,.045);
-    border:1px solid var(--line);
-    line-height:1.8;
-    white-space:pre-wrap;
-}
-
-.cloud-status.success{
-    display:block;
-    border-color:rgba(43,213,118,.35);
-    color:#9ff3bf;
-}
-
-.cloud-status.error{
-    display:block;
-    border-color:rgba(255,77,109,.35);
-    color:#ff9aae;
-}
-
-.cloud-status.info{
-    display:block;
-    color:#aeefff;
-}
-
-@media(max-width:560px){
-    .container{
-        padding:14px 10px 40px;
-    }
-
-    .search-card,.admin{
-        padding:15px;
-        border-radius:21px;
-    }
-
-    .search-box{
-        flex-direction:column;
-    }
-
-    .hero{
-        padding-top:16px;
-    }
-}
+:root{--bg:#070b17;--card:#111930;--card2:#182442;--line:rgba(255,255,255,.10);--text:#f7f9ff;--muted:#aab5d1;--purple:#7c5cff;--cyan:#20d9ff;--red:#ff4d6d;--green:#2bd576}
+body{margin:0;min-height:100vh;font-family:Arial,"Noto Sans Arabic",sans-serif;color:var(--text);background:radial-gradient(circle at 10% 5%,rgba(124,92,255,.28),transparent 30%),radial-gradient(circle at 90% 15%,rgba(32,217,255,.17),transparent 28%),radial-gradient(circle at 50% 100%,rgba(124,92,255,.12),transparent 38%),var(--bg)}
+.container{width:min(760px,100%);margin:auto;padding:28px 15px 55px}
+.hero{text-align:center;padding:22px 8px 25px}
+.logo{width:70px;height:70px;margin:0 auto 15px;border-radius:22px;display:grid;place-items:center;font-size:30px;font-weight:900;background:linear-gradient(135deg,var(--purple),var(--cyan));box-shadow:0 15px 45px rgba(124,92,255,.28)}
+h1{margin:0;font-size:clamp(32px,8vw,52px);font-weight:900;background:linear-gradient(90deg,#fff,#c9c1ff,#8ceeff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{color:var(--muted);margin-top:8px;font-size:14px}
+.search-card,.admin{background:linear-gradient(145deg,rgba(20,29,56,.92),rgba(9,14,30,.86));border:1px solid var(--line);border-radius:26px;padding:20px;box-shadow:0 25px 70px rgba(0,0,0,.30);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.search-box{display:flex;gap:9px}
+input,textarea,button{width:100%;border-radius:15px;padding:14px 16px;font:inherit;font-size:16px;outline:none;transition:.2s}
+input,textarea{color:var(--text);background:rgba(255,255,255,.055);border:1px solid var(--line)}
+input::placeholder,textarea::placeholder{color:#7f8bab}
+input:focus,textarea:focus{border-color:rgba(124,92,255,.8);box-shadow:0 0 0 4px rgba(124,92,255,.12)}
+.search-box input{flex:1}
+button{border:0;color:white;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--purple),#597dff);box-shadow:0 9px 25px rgba(124,92,255,.20)}
+button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:none}
+.search-section{margin-bottom:14px}.search-section:last-child{margin-bottom:0}.search-label{font-weight:800;color:#dce3fa;margin-bottom:7px}.phone-section{padding-top:14px;border-top:1px solid var(--line)}
+#results{margin-top:18px}
+.person{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));border:1px solid var(--line);border-radius:19px;padding:17px;margin-bottom:11px}
+.person:before{content:"";position:absolute;right:0;top:0;bottom:0;width:3px;background:linear-gradient(var(--purple),var(--cyan))}
+.person-name{font-size:20px;font-weight:800;padding-right:5px}
+.phone-data{margin-top:8px;color:#8ceeff;direction:ltr;text-align:right;font-weight:700}
+.more-data{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);white-space:pre-wrap;line-height:1.8;color:#dce5ff}
+.no-data{margin-top:10px;color:#7f8aa5}
+.details-button{margin-top:12px;background:linear-gradient(135deg,#18213e,#28345c);border:1px solid rgba(124,92,255,.28);box-shadow:none}
+.empty{text-align:center;color:var(--muted);padding:28px 15px;border:1px dashed var(--line);border-radius:18px;margin-top:18px}
+.admin-button{display:block;width:min(220px,100%);margin:22px auto 0;background:linear-gradient(135deg,#18213e,#28345c);border:1px solid rgba(124,92,255,.28)}
+.admin{display:none;margin-top:22px}.admin h2{margin:0 0 18px;font-size:25px}.admin-field{margin-bottom:15px}.admin-field label{display:block;margin-bottom:7px;font-weight:800;color:#dce3fa}
+textarea{min-height:120px;resize:vertical}
+.admin-list{margin-top:22px}.admin-item{padding:15px 0;border-bottom:1px solid var(--line)}.admin-name{font-weight:800;font-size:18px}.admin-phone{margin-top:6px;color:#8ceeff;direction:ltr;text-align:right}.admin-data{margin-top:7px;color:#aeb9d4;white-space:pre-wrap;line-height:1.7}
+.delete{background:linear-gradient(135deg,#a8173d,var(--red));margin-top:10px}.logout{background:#303b59;margin-top:10px}.cloud-button{display:block;width:min(300px,100%);margin:12px auto 0;background:linear-gradient(135deg,#087f9f,#20bfe0)}
+.cloud-status{display:none;margin-top:14px;padding:13px 15px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid var(--line);line-height:1.8;white-space:pre-wrap}
+.cloud-status.success{display:block;border-color:rgba(43,213,118,.35);color:#9ff3bf}.cloud-status.error{display:block;border-color:rgba(255,77,109,.35);color:#ff9aae}.cloud-status.info{display:block;color:#aeefff}
+@media(max-width:560px){.container{padding:14px 10px 40px}.search-card,.admin{padding:15px;border-radius:21px}.search-box{flex-direction:column}.hero{padding-top:16px}}
 </style>
 </head>
-
 <body>
-
 <div class="container">
-
-<div class="hero">
+  <div class="hero">
     <div class="logo">⌕</div>
     <h1>گەڕانی ناوەکان</h1>
     <div class="subtitle">ناو یان ژمارەی تەلەفون بگەڕێ و ئەنجامەکان ببینە</div>
-</div>
-
-<div class="search-card">
-
+  </div>
+  <div class="search-card">
     <div class="search-section">
-        <div class="search-label">گەڕان بە ناو</div>
-        <div class="search-box">
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="تەنها ناو بنووسە..."
-                onkeydown="if(event.key==='Enter') searchNames()"
-            >
-            <button onclick="searchNames()">گەڕان</button>
-        </div>
+      <div class="search-label">گەڕان بە ناو</div>
+      <div class="search-box"><input type="text" id="searchInput" placeholder="تەنها ناو بنووسە..." onkeydown="if(event.key==='Enter') searchNames()"><button onclick="searchNames()">گەڕان</button></div>
     </div>
-
     <div class="search-section phone-section">
-        <div class="search-label">گەڕان بە ژمارەی تەلەفون</div>
-        <div class="search-box">
-            <input
-                type="tel"
-                id="phoneSearchInput"
-                placeholder="تەنها ژمارە بنووسە..."
-                onkeydown="if(event.key==='Enter') searchPhone()"
-            >
-            <button onclick="searchPhone()">گەڕان</button>
-        </div>
+      <div class="search-label">گەڕان بە ژمارەی تەلەفون</div>
+      <div class="search-box"><input type="tel" id="phoneSearchInput" placeholder="تەنها ژمارە بنووسە..." onkeydown="if(event.key==='Enter') searchPhone()"><button onclick="searchPhone()">گەڕان</button></div>
     </div>
-
-    <div class="search-section phone-section electricity-section">
-        <div class="search-label">گەڕان بە کارەبا</div>
-        <div class="search-box">
-            <input
-                type="text"
-                id="electricitySearchInput"
-                placeholder="زانیاری کارەبا بنووسە..."
-                onkeydown="if(event.key==='Enter') searchElectricity()"
-            >
-            <button onclick="searchElectricity()">گەڕان</button>
-        </div>
+    <div class="search-section phone-section">
+      <div class="search-label">گەڕان بە کارەبا</div>
+      <div class="search-box"><input type="text" id="electricitySearchInput" placeholder="زانیاری کارەبا بنووسە..." onkeydown="if(event.key==='Enter') searchElectricity()"><button onclick="searchElectricity()">گەڕان</button></div>
     </div>
-
-    <div id="results" class="empty">
-        بۆ پیشاندانی ناو یان ژمارە، گەڕان بکە.
-    </div>
-
-</div>
-
-<button class="admin-button" onclick="openAdmin()">
-    Admin Panel
-</button>
-
-<div id="adminPanel" class="admin">
-
+    <div id="results" class="empty">بۆ پیشاندانی ناو یان ژمارە، گەڕان بکە.</div>
+  </div>
+  <button class="admin-button" onclick="openAdmin()">Admin Panel</button>
+  <div id="adminPanel" class="admin">
     <h2>Admin Panel</h2>
-
-    <div class="admin-field">
-        <label>ناو</label>
-        <input
-            type="text"
-            id="newName"
-            placeholder="ناوی کەسەکە"
-        >
-    </div>
-
-    <div class="admin-field">
-        <label>ژمارەی تەلەفون</label>
-        <input
-            type="tel"
-            id="phoneData"
-            placeholder="ژمارەی تەلەفون"
-        >
-    </div>
-
-    <div class="admin-field">
-        <label>کارەبا</label>
-        <textarea
-            id="electricityData"
-            placeholder="زانیاری کارەبا لێرە بنووسە..."
-        ></textarea>
-    </div>
-
-    <div class="admin-field">
-        <label>داتای زیاتر / پرسیارەکان</label>
-        <textarea
-            id="moreData"
-            placeholder="هەر داتا، پرسیار یان زانیارییەک هەیە لێرە بنووسە..."
-        ></textarea>
-    </div>
-
-    <button onclick="addPerson()">زیادکردن</button>
-
-    <button class="cloud-button" onclick="openCloudImport()">
-        ☁️ گواستنەوەی داتا بۆ Cloud
-    </button>
-
-    <button class="logout" onclick="logout()">
-        دەرچوون
-    </button>
-
+    <div class="admin-field"><label>ناو</label><input type="text" id="newName" placeholder="ناوی کەسەکە"></div>
+    <div class="admin-field"><label>ژمارەی تەلەفون</label><input type="tel" id="phoneData" placeholder="ژمارەی تەلەفون"></div>
+    <div class="admin-field"><label>کارەبا</label><textarea id="electricityData" placeholder="زانیاری کارەبا لێرە بنووسە..."></textarea></div>
+    <div class="admin-field"><label>داتای زیاتر / پرسیارەکان</label><textarea id="moreData" placeholder="هەر داتا، پرسیار یان زانیارییەک هەیە لێرە بنووسە..."></textarea></div>
+    <button id="addButton" onclick="addPerson()">زیادکردن و پاشەکەوتکردن</button>
+    <button class="cloud-button" onclick="openCloudImport()">☁️ گواستنەوەی داتای کۆن بۆ Cloud</button>
+    <button class="logout" onclick="logout()">دەرچوون</button>
     <div id="cloudStatus" class="cloud-status"></div>
-
     <div id="adminList" class="admin-list"></div>
-
+  </div>
 </div>
-
-</div>
-
 <script>
+"use strict";
 
 /*
-    گرنگ:
-    - داتای کۆنی localStorage نابڕدرێت و overwrite ناکرێت.
-    - localStorage.clear() بەکارنەهاتووە.
-    - خانەی "more" ـی هەموو تۆمارە کۆنەکان پارێزراوە.
-    - تەنها بۆ تۆمارە نوێکان phone زیاد دەکرێت.
-    - Cloud migration تەنها copy ـێکی داتا بۆ Worker ـە؛
-      هیچ شتێک لە localStorage ناسڕێتەوە و ناگۆڕێت.
+  ئەم وەشانە داتای پێشوو لە localStorage دەپارێزێت.
+  localStorage.clear() و localStorage.removeItem("people") بەکارنەهاتوون.
+  گواستنەوەی Cloud بە API ـی /api/import ئەنجام دەدرێت.
+  زیادکردنی خۆکارانە بۆ Cloud پێویستی بە endpoint ـی تایبەتی Worker هەیە؛
+  بۆیە ئەم وەشانە بەبێ دڵنیایی endpoint ـێکی نوێ دروست ناکات.
 */
-
 const defaultPeople = [
-
-    {name:"ئەوین محمد امین",more:""},
-    {name:"اسماعیل محمد",more:""},
-    {name:"ژوان ستار محمد",more:""},
-    {name:"احمد عولا ابراهیم",more:""},
-    {name:"احمد عولا احمد",more:""},
-    {name:"احمد جمیل بریندار",more:""},
-    {name:"احمد جمیل حسین",more:""},
-    {name:"اسماعیل رسول",more:""},
-    {name:"اسماعیل رسول ئەحمەد",more:""},
-    {name:"حسن علی",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی احمد",more:""},
-    {name:"حسن علی اسماعیل",more:""},
-    {name:"حسن علی بابیر",more:""},
-    {name:"حسن علی تمر",more:""},
-    {name:"حسن علی جمو",more:""}
-
+{name:"ئەوین محمد امین",more:""},{name:"اسماعیل محمد",more:""},{name:"ژوان ستار محمد",more:""},
+{name:"احمد عولا ابراهیم",more:""},{name:"احمد عولا احمد",more:""},{name:"احمد جمیل بریندار",more:""},
+{name:"احمد جمیل حسین",more:""},{name:"اسماعیل رسول",more:""},{name:"اسماعیل رسول ئەحمەد",more:""},
+{name:"حسن علی",more:""},{name:"حسن علی احمد",more:""},{name:"حسن علی احمد",more:""},
+{name:"حسن علی احمد",more:""},{name:"حسن علی احمد",more:""},{name:"حسن علی احمد",more:""},
+{name:"حسن علی احمد",more:""},{name:"حسن علی اسماعیل",more:""},{name:"حسن علی بابیر",more:""},
+{name:"حسن علی تمر",more:""},{name:"حسن علی جمو",more:""}
 ];
 
-
-/*
-    ئەگەر people هەبێت:
-    هەمان داتا بە تەواوی وەردەگیرێت.
-    ئەگەر هیچ people ـێک نەبێت:
-    تەنها ئەو 20 تۆمارە سەرەتاییە دادەنرێن.
-*/
 function loadPeople(){
-
-    const saved = localStorage.getItem("people");
-
-    if(saved !== null){
-
-        try{
-
-            const parsed = JSON.parse(saved);
-
-            if(Array.isArray(parsed)){
-                return parsed;
-            }
-
-        }catch(error){
-
-            console.error("هەڵە لە خوێندنەوەی داتای people:",error);
-
-        }
-
+  const saved = localStorage.getItem("people");
+  if(saved !== null){
+    try {
+      const parsed = JSON.parse(saved);
+      if(Array.isArray(parsed)) return parsed;
+      console.error("localStorage.people آرایه نییە؛ داتای کۆن دەستکاری ناکرێت.");
+    } catch(error) {
+      console.error("نەتوانرا localStorage.people بخوێندرێتەوە:", error);
     }
-
-    return defaultPeople.map(person => ({...person}));
+    return [];
+  }
+  return defaultPeople.map(person => ({...person}));
 }
-
-
 let people = loadPeople();
 
-
-/* هەڵگرتنی داتا */
+/* پاشەکەوتی پارێزراو: ئەگەر quota/permission هەڵە بدات، ئاگاداری دەدات. */
 function savePeople(){
-
-    localStorage.setItem(
-        "people",
-        JSON.stringify(people)
-    );
-
+  try {
+    localStorage.setItem("people", JSON.stringify(people));
+    const check = JSON.parse(localStorage.getItem("people") || "null");
+    if(!Array.isArray(check)) throw new Error("پشتڕاستکردنەوەی داتا سەرکەوتوو نەبوو.");
+    return true;
+  } catch(error) {
+    console.error("هەڵەی پاشەکەوتکردنی داتا:", error);
+    throw error;
+  }
 }
-
-
-/* پیشاندانی ئەنجامەکان */
-function showResults(found){
-
-    const results =
-        document.getElementById("results");
-
-    if(found.length === 0){
-
-        results.innerHTML =
-            '<div class="empty">هیچ تۆمارێک نەدۆزرایەوە.</div>';
-
-        return;
-    }
-
-    results.innerHTML = "";
-
-
-    found.forEach(person => {
-
-        const div =
-            document.createElement("div");
-
-        div.className = "person";
-
-
-        const name =
-            document.createElement("div");
-
-        name.className = "person-name";
-
-        name.textContent =
-            person.name || "";
-
-        div.appendChild(name);
-
-
-        if(person.phone){
-
-            const phone =
-                document.createElement("div");
-
-            phone.className = "phone-data";
-
-            phone.textContent =
-                "📞 " + String(person.phone);
-
-            div.appendChild(phone);
-
-        }
-
-        if(person.electricity){
-            const electricity = document.createElement("div");
-            electricity.className = "more-data";
-            electricity.textContent = "⚡ کارەبا: " + String(person.electricity);
-            div.appendChild(electricity);
-        }
-
-        const more =
-            document.createElement("div");
-
-
-        if(
-            person.more !== undefined &&
-            person.more !== null &&
-            String(person.more).trim()
-        ){
-
-            more.className = "more-data";
-
-            more.textContent =
-                String(person.more);
-
-        }else{
-
-            more.className = "no-data";
-
-            more.textContent =
-                "داتای زیاتر نەدۆزرایەوە";
-
-        }
-
-
-        div.appendChild(more);
-
-        results.appendChild(div);
-
-    });
-
-}
-
-
-/* گەڕان بە ناو */
 function normalizeName(value){
-    return String(value || "")
-        .toLowerCase()
-        .replace(/[ًٌٍَُِّْـ]/g, "")
-        .replace(/[يى]/g, "ی")
-        .replace(/[ك]/g, "ک")
-        .replace(/[ۀة]/g, "ە")
-        .replace(/\s+/g, " ")
-        .trim();
+  return String(value || "").toLowerCase()
+    .replace(/[ًٌٍَُِّْـ]/g,"")
+    .replace(/[يى]/g,"ی").replace(/[ك]/g,"ک")
+    .replace(/[أإآٱ]/g,"ا").replace(/[ۀة]/g,"ە")
+    .replace(/\s+/g," ").trim();
 }
+function normalizePhone(value){ return String(value || "").replace(/[^\d+]/g,""); }
 
+function showResults(found){
+  const results = document.getElementById("results");
+  if(!found.length){ results.innerHTML='<div class="empty">هیچ تۆمارێک نەدۆزرایەوە.</div>'; return; }
+  results.innerHTML="";
+  found.forEach(person=>{
+    const div=document.createElement("div"); div.className="person";
+    const name=document.createElement("div"); name.className="person-name"; name.textContent=person.name || "ناو تۆمار نەکراوە"; div.appendChild(name);
+    const details=document.createElement("div"); details.style.display="none";
+    const hasDetails=Boolean(String(person.phone || "").trim() || String(person.electricity || "").trim() || String(person.more || "").trim());
+    if(String(person.phone || "").trim()){ const p=document.createElement("div"); p.className="phone-data"; p.textContent="📞 "+String(person.phone); details.appendChild(p); }
+    if(String(person.electricity || "").trim()){ const e=document.createElement("div"); e.className="more-data"; e.textContent="⚡ کارەبا: "+String(person.electricity); details.appendChild(e); }
+    if(String(person.more || "").trim()){ const m=document.createElement("div"); m.className="more-data"; m.textContent=String(person.more); details.appendChild(m); }
+    if(!hasDetails){ const n=document.createElement("div"); n.className="no-data"; n.textContent="ببورە، هیچ زانیارییەکی زیاتر بۆ ئەم کەسە تۆمار نەکراوە."; details.appendChild(n); }
+    const btn=document.createElement("button"); btn.className="details-button"; btn.textContent="📋 تەواوی زانیاری کەسەکە";
+    btn.onclick=()=>{ const opening=details.style.display==="none"; details.style.display=opening?"block":"none"; btn.textContent=opening?"🔼 داخستنی زانیاری":"📋 تەواوی زانیاری کەسەکە"; };
+    div.appendChild(btn); div.appendChild(details); results.appendChild(div);
+  });
+}
 function searchNames(){
-    const input = normalizeName(document.getElementById("searchInput").value);
-
-    if(!input){
-        document.getElementById("results").innerHTML =
-            '<div class="empty">بۆ پیشاندانی ناو، گەڕان بکە.</div>';
-        return;
-    }
-
-    const words = input.split(/\s+/);
-
-    const found = people.filter(person => {
-        const name = normalizeName(person.name);
-        const nameWords = name.split(/\s+/).filter(Boolean);
-
-        return words.every(word =>
-            nameWords.some(nameWord => nameWord.startsWith(word))
-        );
-    });
-
-    showResults(found);
+  const input=normalizeName(document.getElementById("searchInput").value);
+  if(!input){document.getElementById("results").innerHTML='<div class="empty">بۆ پیشاندانی ناو، گەڕان بکە.</div>';return;}
+  const words=input.split(/\s+/);
+  showResults(people.filter(person=>{const nw=normalizeName(person.name).split(/\s+/).filter(Boolean);return words.every(word=>nw.some(w=>w.startsWith(word)));}));
 }
-
-function normalizePhone(value){
-
-    return String(value || "")
-        .replace(/[^\d+]/g,"");
-
-}
-
-
-/* گەڕان بە ژمارەی تەلەفون */
 function searchPhone(){
-
-    const input =
-        normalizePhone(
-            document
-            .getElementById("phoneSearchInput")
-            .value
-            .trim()
-        );
-
-
-    if(!input){
-
-        document.getElementById("results").innerHTML =
-            '<div class="empty">ژمارەی تەلەفون بنووسە.</div>';
-
-        return;
-    }
-
-
-    const found =
-        people.filter(person => {
-
-            const phone =
-                normalizePhone(person.phone);
-
-            return phone !== "" &&
-                   phone.includes(input);
-
-        });
-
-
-    showResults(found);
-
+  const input=normalizePhone(document.getElementById("phoneSearchInput").value);
+  if(!input){document.getElementById("results").innerHTML='<div class="empty">ژمارەی تەلەفون بنووسە.</div>';return;}
+  showResults(people.filter(person=>{const phone=normalizePhone(person.phone);return phone && phone.includes(input);}));
 }
-
-
-/* گەڕان بە کارەبا */
 function searchElectricity(){
-    const input = normalizeName(document.getElementById("electricitySearchInput").value);
-
-    if(!input){
-        document.getElementById("results").innerHTML =
-            '<div class="empty">زانیاری کارەبا بنووسە.</div>';
-        return;
-    }
-
-    const found = people.filter(person =>
-        normalizeName(person.electricity).includes(input)
-    );
-
-    showResults(found);
+  const input=normalizeName(document.getElementById("electricitySearchInput").value);
+  if(!input){document.getElementById("results").innerHTML='<div class="empty">زانیاری کارەبا بنووسە.</div>';return;}
+  showResults(people.filter(person=>normalizeName(person.electricity).includes(input)));
 }
-
-
-/* کردنەوەی Admin */
 function openAdmin(){
-
-    const code =
-        prompt("کۆدی Admin بنووسە:");
-
-
-    if(code !== "5624"){
-
-        alert("کۆدی Admin هەڵەیە.");
-
-        return;
-    }
-
-
-    document
-        .getElementById("adminPanel")
-        .style.display = "block";
-
-
-    loadAdmin();
-
+  const code=prompt("کۆدی Admin بنووسە:");
+  if(code!=="5624"){alert("کۆدی Admin هەڵەیە.");return;}
+  document.getElementById("adminPanel").style.display="block";
+  loadAdmin();
 }
-
-
-/* زیادکردنی کەس */
 function addPerson(){
+  const nameInput=document.getElementById("newName");
+  const phoneInput=document.getElementById("phoneData");
+  const moreInput=document.getElementById("moreData");
+  const electricityInput=document.getElementById("electricityData");
+  const name=nameInput.value.trim(), phone=phoneInput.value.trim(), more=moreInput.value.trim(), electricity=electricityInput.value.trim();
+  if(!name && !phone && !electricity && !more){alert("تکایە لانیکەم یەک خانە پڕ بکەرەوە.");return;}
 
-    const nameInput =
-        document.getElementById("newName");
-
-    const phoneInput =
-        document.getElementById("phoneData");
-
-    const moreInput =
-        document.getElementById("moreData");
-
-    const electricityInput =
-        document.getElementById("electricityData");
-
-    const electricity =
-        electricityInput.value.trim();
-
-    const name =
-        nameInput.value.trim();
-
-    const phone =
-        phoneInput.value.trim();
-
-    const more =
-        moreInput.value.trim();
-
-
-    if(!name && !phone && !electricity){
-
-        alert("تکایە ناو یان ژمارەی تەلەفون یان زانیاری کارەبا بنووسە.");
-
-        return;
-    }
-
-    /* ناو و ژمارە هەریەکەیان بە جیاوازی دڵنیایی لە دوبارەبوونەوەی بۆ دەکرێت */
-    const normalizedNewName = normalizeName(name);
-
-    if(normalizedNewName){
-        const duplicateName = people.some(person =>
-            normalizeName(person.name) === normalizedNewName
-        );
-
-        if(duplicateName){
-            alert("ببورە، ئەم ناوە دوبارەیە. ناتوانیت هەڵی بگریت.");
-            return;
-        }
-    }
-
-    const normalizedNewPhone = normalizePhone(phone);
-
-    if(normalizedNewPhone){
-        const duplicatePhone = people.some(person =>
-            normalizePhone(person.phone) === normalizedNewPhone
-        );
-
-        if(duplicatePhone){
-            alert("ببورە، ئەم ژمارەی تەلەفونە دوبارەیە. ناتوانیت هەڵی بگریت.");
-            return;
-        }
-    }
-
-
-    /*
-        تەنها تۆمارێکی نوێ زیاد دەکەین.
-        هیچ تۆمارێکی کۆن ناگۆڕدرێت.
-    */
-    people.push({
-
-        name:name,
-
-        phone:phone,
-
-        more:more,
-
-        electricity:electricity
-
-    });
-
-
+  const normalizedNewName=normalizeName(name), normalizedNewPhone=normalizePhone(phone);
+  /* ناوی دووبارە ڕێگەپێدراوە ئەگەر ژمارەی جیاواز هەبێت؛ ژمارەی یەکسان ڕەت دەکرێتەوە. */
+  if(normalizedNewPhone && people.some(person=>normalizePhone(person.phone)===normalizedNewPhone)){
+    alert("ئەم ژمارەی تەلەفونە پێشتر تۆمار کراوە.");return;
+  }
+  if(normalizedNewName && people.some(person=>normalizeName(person.name)===normalizedNewName && (!normalizedNewPhone || normalizePhone(person.phone)===normalizedNewPhone))){
+    alert("ئەم کەسە بە هەمان ناو و ژمارە پێشتر تۆمار کراوە.");return;
+  }
+  const newPerson={id:(globalThis.crypto && crypto.randomUUID)?crypto.randomUUID():"person-"+Date.now()+"-"+Math.random().toString(16).slice(2),name,phone,electricity,more};
+  people.push(newPerson);
+  try {
     savePeople();
-
-
-    nameInput.value = "";
-
-    phoneInput.value = "";
-
-    moreInput.value = "";
-
-    electricityInput.value = "";
-
-
-    loadAdmin();
-
-
-    alert("تۆمارەکە زیادکرا.");
-
+  } catch(error) {
+    people.pop();
+    alert("❌ داتا پاشەکەوت نەکرا. ڕەنگە بیرگەی وێبگەکە پڕ بێت یان وێبگەکە لە دۆخی ناپاشەکەوتکراودا بێت. داتا لە لیستەکە زیاد نەکرا.");
+    return;
+  }
+  nameInput.value=""; phoneInput.value=""; moreInput.value=""; electricityInput.value="";
+  loadAdmin();
+  alert("✅ داتا لە مۆبایل پاشەکەوت کرا.\nبۆ گواستنەوەی بۆ Cloud دوگمەی «گواستنەوەی داتای کۆن بۆ Cloud» بەکاربهێنە.");
 }
-
-
-/* لیستی Admin */
 function loadAdmin(){
-
-    const list =
-        document.getElementById("adminList");
-
-
-    list.innerHTML = "";
-
-
-    people.forEach((person,index) => {
-
-        const item =
-            document.createElement("div");
-
-        item.className =
-            "admin-item";
-
-
-        const name =
-            document.createElement("div");
-
-        name.className =
-            "admin-name";
-
-        name.textContent =
-            person.name || "";
-
-        item.appendChild(name);
-
-
-        if(person.phone){
-
-            const phone =
-                document.createElement("div");
-
-            phone.className =
-                "admin-phone";
-
-            phone.textContent =
-                "📞 " + String(person.phone);
-
-            item.appendChild(phone);
-
-        }
-
-        if(person.electricity){
-            const electricity = document.createElement("div");
-            electricity.className = "admin-data";
-            electricity.textContent = "⚡ کارەبا: " + String(person.electricity);
-            item.appendChild(electricity);
-        }
-
-        const data =
-            document.createElement("div");
-
-        data.className =
-            "admin-data";
-
-
-        if(
-            person.more !== undefined &&
-            person.more !== null &&
-            String(person.more).trim()
-        ){
-
-            data.textContent =
-                String(person.more);
-
-        }else{
-
-            data.textContent =
-                "داتای زیاتر نییە";
-
-        }
-
-
-        item.appendChild(data);
-
-
-        const del =
-            document.createElement("button");
-
-        del.className =
-            "delete";
-
-        del.textContent =
-            "سڕینەوە";
-
-
-        del.onclick =
-            function(){
-
-                deletePerson(index);
-
-            };
-
-
-        item.appendChild(del);
-
-        list.appendChild(item);
-
-    });
-
+  const list=document.getElementById("adminList"); list.innerHTML="";
+  people.forEach((person,index)=>{
+    const item=document.createElement("div"); item.className="admin-item";
+    const name=document.createElement("div"); name.className="admin-name"; name.textContent=person.name||"ناوی نییە"; item.appendChild(name);
+    if(person.phone){const p=document.createElement("div");p.className="admin-phone";p.textContent="📞 "+String(person.phone);item.appendChild(p);}
+    if(person.electricity){const e=document.createElement("div");e.className="admin-data";e.textContent="⚡ کارەبا: "+String(person.electricity);item.appendChild(e);}
+    const data=document.createElement("div");data.className="admin-data";data.textContent=String(person.more||"داتای زیاتر نییە");item.appendChild(data);
+    const del=document.createElement("button");del.className="delete";del.textContent="سڕینەوە";del.onclick=()=>deletePerson(index);item.appendChild(del);
+    list.appendChild(item);
+  });
 }
-
-
-/* سڕینەوەی تۆمار */
 function deletePerson(index){
-
-    if(!confirm("دڵنیایت لە سڕینەوەی ئەم تۆمارە؟")){
-
-        return;
-    }
-
-
-    people.splice(index,1);
-
-    savePeople();
-
-    loadAdmin();
-
+  if(!confirm("دڵنیایت لە سڕینەوەی ئەم تۆمارە؟"))return;
+  const removed=people.splice(index,1);
+  try{savePeople();loadAdmin();}
+  catch(error){people.splice(index,0,...removed);alert("❌ سڕینەوە پاشەکەوت نەکرا؛ داتا گەڕێندرایەوە.");}
 }
-
-
-/*
-    ================================
-    Cloud Migration
-    ================================
-
-    گرنگ:
-    - localStorage.clear() بەکارنەهاتووە.
-    - removeItem("people") بەکارنەهاتووە.
-    - localStorage.people لە هیچ شوێنێک لەم import ـەدا ناگۆڕدرێت.
-    - هەموو field ـەکانی تۆمارەکان، بە تایبەتی id/name/phone/more،
-      بە هەمان شێوەی خۆیان بۆ Worker دەنێردرێن.
-*/
-
-const CLOUD_IMPORT_URL =
-    "https://data-zanyari.lawaking24.workers.dev/api/import";
-
-
+const CLOUD_IMPORT_URL="https://data-zanyari.lawaking24.workers.dev/api/import";
 function openCloudImport(){
-
-    const saved =
-        localStorage.getItem("people");
-
-    if(saved === null){
-
-        alert("هیچ localStorage.people ـێک نەدۆزرایەوە.");
-
-        return;
-    }
-
-
-    let localPeople;
-
-    try{
-
-        localPeople = JSON.parse(saved);
-
-    }catch(error){
-
-        alert("نەتوانرا localStorage.people بخوێندرێتەوە.");
-
-        return;
-    }
-
-
-    if(!Array.isArray(localPeople)){
-
-        alert("داتای localStorage.people دروست نییە.");
-
-        return;
-    }
-
-
-    const key =
-        prompt("IMPORT_KEY بنووسە:");
-
-
-    if(key === null){
-        return;
-    }
-
-
-    if(!key.trim()){
-
-        alert("IMPORT_KEY بەتاڵ نابێت.");
-
-        return;
-    }
-
-
-    importPeopleToCloud(
-        localPeople,
-        key.trim()
-    );
-
+  let localPeople;
+  try{
+    const saved=localStorage.getItem("people");
+    if(saved===null){alert("هیچ داتای people لە مۆبایل پاشەکەوت نەکراوە.");return;}
+    localPeople=JSON.parse(saved);
+  }catch(error){alert("نەتوانرا داتای مۆبایل بخوێندرێتەوە.");return;}
+  if(!Array.isArray(localPeople)){alert("شێوەی داتای پاشەکەوتکراو دروست نییە.");return;}
+  const key=prompt("IMPORT_KEY بنووسە:");
+  if(key===null)return;
+  if(!key.trim()){alert("IMPORT_KEY بەتاڵ نابێت.");return;}
+  importPeopleToCloud(localPeople,key.trim());
 }
-
-
 async function importPeopleToCloud(localPeople,key){
-
-    const button =
-        document.querySelector(".cloud-button");
-
-    const status =
-        document.getElementById("cloudStatus");
-
-
-    if(button){
-        button.disabled = true;
-        button.textContent = "☁️ داتا دەگوازرێتەوە...";
-    }
-
-
-    status.className = "cloud-status info";
-    status.textContent =
-        "تکایە چاوەڕێ بکە... داتا بۆ Cloud دەنێردرێت.";
-
-
-    try{
-
-        /*
-            تەنها copy ـێکی نوێ بۆ JSON دروست دەکرێت.
-            هیچ field ـێک زیاد، سڕینەوە یان گۆڕینەوەی localStorage ناکات.
-            Object.assign هەموو خانەکانی هەر تۆمارێک دەپارێزێت.
-        */
-        const records = localPeople.map(person => ({
-            ...(person || {})
-        }));
-
-
-        const response =
-            await fetch(
-                CLOUD_IMPORT_URL,
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":"application/json",
-                        "X-Import-Key":key
-                    },
-
-                    body:JSON.stringify({
-                        people:records
-                    })
-                }
-            );
-
-
-        let result = null;
-
-        try{
-            result = await response.json();
-        }catch(error){
-            result = null;
-        }
-
-
-        if(!response.ok){
-
-            const message =
-                result &&
-                (
-                    result.message ||
-                    result.error ||
-                    result.detail
-                );
-
-            throw new Error(
-                message ||
-                "Worker وەڵامی سەرکەوتوو نەدا. HTTP " +
-                response.status
-            );
-
-        }
-
-
-        const importedCount =
-            result && Number.isFinite(Number(result.imported))
-                ? Number(result.imported)
-                : result && Number.isFinite(Number(result.count))
-                    ? Number(result.count)
-                    : result && Number.isFinite(Number(result.inserted))
-                        ? Number(result.inserted)
-                        : records.length;
-
-
-        status.className = "cloud-status success";
-
-        status.textContent =
-            "✅ تەواو بوو! " +
-            importedCount +
-            " تۆمار بۆ Cloud گوازرایەوە.";
-
-        alert(
-            "✅ تەواو بوو! " +
-            importedCount +
-            " تۆمار بۆ Cloud گوازرایەوە."
-        );
-
-
-    }catch(error){
-
-        console.error("Cloud import error:",error);
-
-        const message =
-            String(error.message || error);
-
-        status.className = "cloud-status error";
-
-        status.textContent =
-            "❌ هەڵە لە گواستنەوەی داتا.\n" +
-            message;
-
-        alert(
-            "❌ هەڵە لە گواستنەوەی داتا.\n" +
-            message
-        );
-
-
-    }finally{
-
-        if(button){
-
-            button.disabled = false;
-
-            button.textContent =
-                "☁️ گواستنەوەی داتا بۆ Cloud";
-
-        }
-
-    }
-
+  const button=document.querySelector(".cloud-button"),status=document.getElementById("cloudStatus");
+  button.disabled=true;button.textContent="☁️ داتا دەگوازرێتەوە...";
+  status.className="cloud-status info";status.textContent="تکایە چاوەڕێ بکە... داتا بۆ Cloud دەنێردرێت.";
+  try{
+    const records=localPeople.map(person=>({...person}));
+    const response=await fetch(CLOUD_IMPORT_URL,{method:"POST",headers:{"Content-Type":"application/json","X-Import-Key":key},body:JSON.stringify({people:records})});
+    const raw=await response.text(); let result=null;
+    try{result=raw?JSON.parse(raw):null;}catch(_){}
+    if(!response.ok)throw new Error((result&&(result.message||result.error||result.detail))||("HTTP "+response.status+" — "+(raw||"Worker وەڵامی بەتاڵی دا.")));
+    if(!result || result.success===false || result.ok===false || result.error)throw new Error((result&&(result.message||result.error))||"وەڵامی Worker پشتڕاستی سەرکەوتنی نادات.");
+    const count=result.imported??result.count??result.inserted;
+    status.className="cloud-status success";
+    status.textContent="✅ Worker وەڵامی سەرکەوتوو دا."+(count!==undefined?" ژمارەی تۆمارەکان: "+count:"")+" داتای مۆبایل نەسڕایەوە.";
+    alert(status.textContent);
+  }catch(error){
+    console.error("Cloud import error:",error);
+    status.className="cloud-status error";status.textContent="❌ گواستنەوەی داتا سەرکەوتوو نەبوو.\n"+String(error.message||error)+"\nداتاکانی مۆبایل بەجێ ماونەتەوە.";
+    alert(status.textContent);
+  }finally{
+    button.disabled=false;button.textContent="☁️ گواستنەوەی داتای کۆن بۆ Cloud";
+  }
 }
-
-
-/* دەرچوون */
-function logout(){
-
-    document
-        .getElementById("adminPanel")
-        .style.display = "none";
-
-}
-
-
-/* ڕێگری لە HTML injection */
-function escapeHTML(text){
-
-    return String(text || "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-
-}
-
+function logout(){document.getElementById("adminPanel").style.display="none";}
 </script>
-
 </body>
 </html>
